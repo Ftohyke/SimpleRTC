@@ -93,11 +93,13 @@ var PHONE = window.PHONE = function(config) {
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // Local Microphone and Camera Media (one per device)
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    /*
     navigator.getUserMedia = 
         navigator.getUserMedia       ||
         navigator.webkitGetUserMedia ||
         navigator.mozGetUserMedia    ||
         navigator.msGetUserMedia;
+    */  // Deprecated
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // STUN Server List Configuration (public STUN list)
@@ -111,7 +113,8 @@ var PHONE = window.PHONE = function(config) {
 			optional: []
 		},*/
 	    iceServers : [{ "url" :
-	        navigator.mozGetUserMedia    ? "stun:stun.services.mozilla.com" : "stun:stunserver.org"
+					"stun:stun.services.mozilla.com"
+	        /*navigator.mozGetUserMedia    ? "stun:stun.services.mozilla.com" : "stun:stunserver.org"*/
 	        /*navigator.webkitGetUserMedia ? "stun:stun.l.google.com:19302"   :
 	                                       "stun:23.21.150.121"*/
 	    	},
@@ -343,7 +346,7 @@ var PHONE = window.PHONE = function(config) {
             talk.hangup();
         } );
     };
-    
+
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // Expose local stream and pubnub object
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -460,15 +463,35 @@ var PHONE = window.PHONE = function(config) {
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // Stream and error callbacks for MediaStream
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+  	function streamcb(stream) {
+      if (!stream) return unablecb(stream);
+				mystream = stream;
+        phone.mystream = stream;
+        snapshots_setup(stream);
+        onready();
+        subscribe();
+    };
+
+  	function streamerrcb(err) {
+      debugcb(err);
+      return unablecb(err);
+    };
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // Prepare Local Media Camera and Mic
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     function getusermedia() { //Do something if not requesting any media?
+      	// Should oneway or broadcast be set by default?
         if (oneway && !broadcast){
 	        if (!PeerConnection){ return unablecb(); }
 	        onready();
 	        subscribe();
             return;
         }
+        navigator.mediaDevices.getUserMedia( mediaconf ).then( streamcb ).catch( streamerrcb );
+      	/*
         navigator.getUserMedia( mediaconf, function(stream) {
             if (!stream) return unablecb(stream);
             mystream = stream;
@@ -480,6 +503,7 @@ var PHONE = window.PHONE = function(config) {
             debugcb(info);
             return unablecb(info);
         } );
+      	*/  // Deprecated
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

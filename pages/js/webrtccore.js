@@ -2359,8 +2359,8 @@ window['PUBNUB'] || (function() {
  * UTIL LOCALS
  */
 
-var /*SWF             = 'handlers/null'*/
-,   ASYNC           = 'async'
+var /*SWF             = 'handlers/null'
+,*/ ASYNC           = 'async'
 ,   UA              = navigator.userAgent
 ,   PNSDK           = 'PubNub-JS-' + 'Web' + '/' + '3.7.14'
 ,   XORIGN          = UA.indexOf('MSIE 6') == -1;
