@@ -122,7 +122,11 @@
 </div>
 </body>
 
-<!--<script src="js/jquery-3.2.1.min.js"></script>-->
+<!--
+     jQuery dependency disabled temporarily until this source file become
+     a part of full-featured plugin to make page convinient with WordPress themes
+  -->
+<!--<script src="js/jquery-2.1.3.min.js"></script>-->
 <script src="js/webrtccore.js"></script>
 <script src="js/webrtc.js"></script>
 <script type="text/javascript">
@@ -165,16 +169,5 @@ function errWrap(fxn, form){
 </script>
 <script src="js/modalEffects.js"></script>
 <script src="js/classie.js"></script>
-<script>
-	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-			(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new
-		Date();a=s.createElement(o),
-		m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-	})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
-
-	ga('create', 'UA-46933211-3', 'auto');
-	ga('send', 'pageview');
-
-</script>
 
 </html>
