@@ -38,7 +38,8 @@
     require_once('../../../../wp-load.php'); 
 function handler_fun1 ()	
 {
-  echo json_encode(array(100, 1, 33));
+  $current_time = round(microtime(true) * 1000);
+  echo json_encode(array($current_time));
 };
 function handler_fun2 ()	
 {

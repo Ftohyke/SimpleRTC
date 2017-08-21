@@ -133,13 +133,18 @@
 
 var video_out = document.getElementById("vid-box");
 
+function readycb(){
+  form.username.style.background="#55ff5b";
+  form.login_submit.hidden="true";
+}
+
 function login(form) {
 	var phone = window.phone = PHONE({
 	    number        : form.username.value || "Anonymous", // listen on username line else Anonymous
 	    publish_key   : 'pub', // Your Pub Key
 	    subscribe_key : 'sub', // Your Sub Key
 	});	
-	phone.ready(function(){form.username.style.background="#55ff5b"; form.login_submit.hidden="true"; });
+	phone.ready(readycb);
 	phone.receive(function(session){
 	    session.connected(function(session) { video_out.appendChild(session.video); showModal();});
 	    session.ended(function(session) { video_out.innerHTML=''; });

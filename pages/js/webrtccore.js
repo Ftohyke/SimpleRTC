@@ -253,8 +253,12 @@ var NOW             = 1
 /**
  * UTILITIES
  */
-function unique() { return'x'+ ++NOW+''+(+new Date) }
-function rnow()   { return+new Date }
+function unique(){
+  return 'x'+ ++NOW + '' + (+new Date)
+}
+function rnow(){
+  return+new Date
+}
 
 /**
  * NEXTORIGIN
@@ -2267,7 +2271,7 @@ function PN_API(setup) {
 
         function calculate(time) {
             if (!time) return;
-            var ptime   = time / 10000
+            var ptime   = time/* / 10000*/
             ,   latency = (rnow() - stime) / 2;
             TIME_DRIFT = rnow() - (ptime + latency);
             cb && cb(TIME_DRIFT);
