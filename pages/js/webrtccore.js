@@ -23,7 +23,7 @@
  */
 
 /*
- * PubNub Real-time Cloud-Hosted Push API and Push Notification Client Frameworks
+ * PubNub Real-time Cloud-Hosted Push API and Push Notification Client Frameworks v3.7.14
  * Copyright (c) 2013 PubNub Inc.
  * http://www.pubnub.com/
  * http://www.pubnub.com/terms
@@ -83,7 +83,7 @@
 */
 
 
-// Version: 3.7.14
+// Version: 0.0.1a
 /* =-====================================================================-= */
 /* =-====================================================================-= */
 /* =-=========================     JSON     =============================-= */
@@ -247,7 +247,7 @@ var NOW             = 1
 ,   PARAMSBIT       = '&'
 ,   PRESENCE_HB_THRESHOLD = 5
 ,   PRESENCE_HB_DEFAULT  = 30
-,   SDK_VER         = '3.7.14'
+,   SDK_VER         = '0.0.1a'
 ,   REPL            = /{([\w\-]+)}/g;
 
 /**
@@ -1589,7 +1589,14 @@ function PN_API(setup) {
                 // Connect to PubNub Subscribe Servers
                 _reset_offline();
 
-                var data = _get_url_params({ 'uuid' : UUID, 'auth' : AUTH_KEY });
+                var data = _get_url_params({
+                    'key' : SUBSCRIBE_KEY,
+                    'c' : encode(channels),
+                    'jsonp' : jsonp,
+                    'tt' : TIMETOKEN,
+                    'uuid' : UUID,
+                    'auth' : AUTH_KEY
+                });
 
                 if (channel_groups) {
                     data['channel-group'] = channel_groups;
@@ -1620,9 +1627,9 @@ function PN_API(setup) {
                     },
                     data     : _get_url_params(data),
                     url      : [
-                        SUB_ORIGIN, 'subscribe',
+                        SUB_ORIGIN, 'subscribe'/*,
                         SUBSCRIBE_KEY, encode(channels),
-                        jsonp, TIMETOKEN
+                        jsonp, TIMETOKEN*/
                     ],
                     success : function(messages) {
 
@@ -2392,10 +2399,9 @@ window['PUBNUB'] || (function() {
  * UTIL LOCALS
  */
 
-var /*SWF             = 'handlers/null'
-,*/ ASYNC           = 'async'
+var ASYNC           = 'async'
 ,   UA              = navigator.userAgent
-,   PNSDK           = 'PubNub-JS-' + 'Web' + '/' + '3.7.14'
+,   PNSDK           = 'Encorr-' + 'Web' + '/' + SDK_VER
 ,   XORIGN          = UA.indexOf('MSIE 6') == -1;
 
 /**

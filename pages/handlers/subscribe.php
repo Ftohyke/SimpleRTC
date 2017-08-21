@@ -31,13 +31,13 @@
     //if (!isset( $_POST['action']))
         //die('-1');
 
-    require_once('../../../../wp-load.php');
+    require_once('../../../../wp-load.php'); 
 
-    function handler_time ()	
+    function handler_subscribe ()	
     {
-      $current_time = round(microtime(true) * 1000);
+        $subscribed_response = array(7,6,'cc1,cc2,cc3,cc4,cc5,cc6','c6,c5,c4,c3,c2,c1',3,2,1);
 
-      echo json_encode(array($current_time));
+        echo json_encode($subscribed_response);
     };
 
     //Typical headers
@@ -52,22 +52,22 @@
 
     //A bit of security
     $allowed_actions = array(
-        'heartbeat'
+        'subscribe'
     );
 
     //For logged in users
-    add_action('HEARTBEAT', 'handler_time');
+    add_action('SUBSCRIBE', 'handler_subscribe');
 
     //For guests
-    add_action('REJECT_heartbeat', 'handler_reject');
+    add_action('REJECT_subscribe', 'handler_reject');
 
     //if(in_array($action, $allowed_actions)) {
     //    if(is_user_logged_in())
-            do_action('HEARTBEAT');
-    //else
-    //    do_action('REJECT_'.$action);
+            do_action('SUBSCRIBE');
+    //    else
+    //        do_action('REJECT_'.$action);
     //}
-    //else {
+		//else {
     //    die('-1');
     //}
 ?>

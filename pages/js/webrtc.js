@@ -154,15 +154,18 @@ var PHONE = window.PHONE = function(config) {
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // PHONE Events
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    var messagecb    = function(){};
-    var readycb      = function(){};
-    var unablecb     = function(){};
-    var debugcb      = function(){};
-    var connectcb    = function(){};
-    var disconnectcb = function(){};
-    var reconnectcb  = function(){};
-    var callstatuscb = function(){};
-    var receivercb   = function(){};
+    var messagecb     = function(){};
+    var readycb       = function(){};
+    var unablecb      = function(){};
+    var debugcb       = function(){};
+    var connectcb     = function(){};
+    var disconnectcb  = function(){};
+    var reconnectcb   = function(){};
+    var callstatuscb  = function(){};
+    var receivercb    = function(){};
+		var connectcorecb = function(){
+                          onready(true)
+                        };
 
     PHONE.message    = function(cb) { messagecb    = cb };
     PHONE.ready      = function(cb) { readycb      = cb };
@@ -447,7 +450,7 @@ var PHONE = window.PHONE = function(config) {
             message    : receive,
             disconnect : disconnectcb,
             reconnect  : reconnectcb,
-            connect    : function() { onready(true) }
+            connect    : connectcorecb
         });
     }
 

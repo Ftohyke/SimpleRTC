@@ -50,15 +50,10 @@
     <title>WebRTC Video Chat</title>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-
-    
     <link rel="stylesheet" type="text/css" href="stylesheets/style.css" />
     <link rel="stylesheet" type="text/css" href="fonts/font-awesome-4.3.0/css/font-awesome.min.css" />
     <script src="js/modernizr.custom.js"></script>
 	<link rel="stylesheet" type="text/css" href="css/normalize.css" />
-
-
-    
 </head>
 <body>
 <div class = "bodyDiv">
@@ -133,7 +128,7 @@
 
 var video_out = document.getElementById("vid-box");
 
-function readycb(){
+function readycb(form){
   form.username.style.background="#55ff5b";
   form.login_submit.hidden="true";
 }
@@ -144,7 +139,7 @@ function login(form) {
 	    publish_key   : 'pub', // Your Pub Key
 	    subscribe_key : 'sub', // Your Sub Key
 	});	
-	phone.ready(readycb);
+	phone.ready(function (){readycb(form)});
 	phone.receive(function(session){
 	    session.connected(function(session) { video_out.appendChild(session.video); showModal();});
 	    session.ended(function(session) { video_out.innerHTML=''; });
