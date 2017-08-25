@@ -5,9 +5,9 @@
          This file is part of Encorrientador Unido.
 
          Encorrientador Unido is a collection of web-based software plugins for
-         popular open-source content management systems. It has a purpose of providing
+         popular free web-server software. It has a purpose of providing
          secure browser-based video chat with database management features and
-         account registration independent from third-party content delivery networks.
+         account registration independent from third-party web-servers.
          This software is based on PubNub WebRTC video chat source code.
          Copyright (C) 2017  Andrei Shishkin <QfpbC7u3V13qJUop@i2pmail.org>
 
@@ -24,6 +24,7 @@
          You should have received a copy of the GNU General Public License
          along with this program.  If not, see <http://www.gnu.org/licenses/>.
     -->
+
     <!--
         The MIT License (MIT)
 
