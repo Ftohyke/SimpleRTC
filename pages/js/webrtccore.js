@@ -777,10 +777,13 @@ function PN_API(setup) {
             if (!data['auth']) {
                 data['auth'] = args['auth_key'] || AUTH_KEY;
             }
-            
+
+            data['ver'] = 'v1';
+            data['subkey'] = SUBSCRIBE_KEY;
+
             var url = [
-                    STD_ORIGIN, 'v1', 'channel-registration',
-                    'sub-key', SUBSCRIBE_KEY
+                    STD_ORIGIN, 'v1', 'channel-registration'/*,
+                    'sub-key', SUBSCRIBE_KEY*/
                 ];
 
             url.push.apply(url,url1);
@@ -1122,6 +1125,9 @@ function PN_API(setup) {
             if (include_token) params['include_token'] = 'true';
             if (string_msg_token) params['string_message_token'] = 'true';
 
+            params['subkey']   = SUBSCRIBE_KEY;
+            params['channels'] = encode(channel);
+
             // Send Message
             xdr({
                 callback : jsonp,
@@ -1147,8 +1153,8 @@ function PN_API(setup) {
                     _invoke_error(response, err);
                 },
                 url      : [
-                    STD_ORIGIN, 'v2', 'history', 'sub-key',
-                    SUBSCRIBE_KEY, 'channel', encode(channel)
+                    STD_ORIGIN, 'v2', 'history'/*, 'sub-key',
+                    SUBSCRIBE_KEY, 'channel', encode(channel)*/
                 ]
             });
         },
@@ -1188,12 +1194,16 @@ function PN_API(setup) {
             if (limit)        data['count']    = limit;
 
             data['auth'] = auth_key;
+            data['pkey'] = PUBLISH_KEY;
+            data['skey'] = SUBSCRIBE_KEY;
+            data['src'] = source;
+            data['dst'] = destination;
 
             // Compose URL Parts
             url = [
-                STD_ORIGIN, 'v1', 'replay',
+                STD_ORIGIN, 'v1', 'replay'/*,
                 PUBLISH_KEY, SUBSCRIBE_KEY,
-                source, destination
+                source, destination*/
             ];
 
             // Start (or Stop) Replay!
@@ -1274,13 +1284,17 @@ function PN_API(setup) {
 
             // Create URL
             url = [
-                STD_ORIGIN, 'publish',
+                STD_ORIGIN, 'publish'/*,
                 PUBLISH_KEY, SUBSCRIBE_KEY,
                 0, encode(channel),
-                jsonp, encode(msg)
+                jsonp, encode(msg)*/
             ];
 
-            params = { 'uuid' : UUID, 'auth' : auth_key }
+            params = {
+                'msg' : encode(msg), 'jsonp' : jsonp,
+                c : encode(channel), 'numid' : 0, 'skey' : SUBSCRIBE_KEY,
+                'pkey' : PUBLISH_KEY, 'uuid' : UUID, 'auth' : auth_key
+            }
 
             if (!store) params['store'] ="0"
 
@@ -1787,9 +1801,11 @@ function PN_API(setup) {
             if (!callback)      return error('Missing Callback');
             if (!SUBSCRIBE_KEY) return error('Missing Subscribe Key');
 
+            data['subkey'] = SUBSCRIBE_KEY;
+
             var url = [
-                    STD_ORIGIN, 'v2', 'presence',
-                    'sub_key', SUBSCRIBE_KEY
+                    STD_ORIGIN, 'v2', 'presence'/*,
+                    'sub_key', SUBSCRIBE_KEY*/
                 ];
 
             channel && url.push('channel') && url.push(encode(channel));
@@ -1824,8 +1840,7 @@ function PN_API(setup) {
             ,   err      = args['error']    || function(){}
             ,   auth_key = args['auth_key'] || AUTH_KEY
             ,   jsonp    = jsonp_cb()
-            ,   uuid     = args['uuid']     || UUID
-            ,   data     = { 'auth' : auth_key };
+            ,   uuid     = args['uuid']     || UUID;
 
             // Make sure we have a Channel
             if (!callback)      return error('Missing Callback');
@@ -1834,6 +1849,12 @@ function PN_API(setup) {
             if (jsonp != '0') { data['callback'] = jsonp; }
 
             if (USE_INSTANCEID) data['instanceid'] = INSTANCEID;
+
+            data     = {
+                'auth' : auth_key,
+                'subkey' : SUBSCRIBE_KEY,
+                'uuid' : encode(uuid)
+            };
 
             xdr({
                 callback : jsonp,
@@ -1845,9 +1866,9 @@ function PN_API(setup) {
                     _invoke_error(response, err);
                 },
                 url      : [
-                    STD_ORIGIN, 'v2', 'presence',
+                    STD_ORIGIN, 'v2', 'presence'/*,
                     'sub_key', SUBSCRIBE_KEY,
-                    'uuid', encode(uuid)
+                    'uuid', encode(uuid)*/
                 ]
             });
         },
@@ -1889,22 +1910,27 @@ function PN_API(setup) {
             }
 
             data['state'] = JSON.stringify(state);
+            data['subkey'] = SUBSCRIBE_KEY;
+            data['channel'] = channel;
 
             if (USE_INSTANCEID) data['instanceid'] = INSTANCEID;
 
             if (state) {
+                data['uuid'] = uuid;
+                data['action'] = 'data';
                 url      = [
-                    STD_ORIGIN, 'v2', 'presence',
+                    STD_ORIGIN, 'v2', 'presence'/*,
                     'sub-key', SUBSCRIBE_KEY,
                     'channel', channel,
-                    'uuid', uuid, 'data'
+                    'uuid', uuid, 'data'*/
                 ]
             } else {
+                data['uuid'] = encode(uuid);
                 url      = [
-                    STD_ORIGIN, 'v2', 'presence',
+                    STD_ORIGIN, 'v2', 'presence'/*,
                     'sub-key', SUBSCRIBE_KEY,
                     'channel', channel,
-                    'uuid', encode(uuid)
+                    'uuid', encode(uuid)*/
                 ]
             }
 
@@ -1990,6 +2016,8 @@ function PN_API(setup) {
             signature = signature.replace( /\//g, "_" );
 
             data['signature'] = signature;
+            data['action'] = 'grant';
+            data['subkey'] = SUBSCRIBE_KEY;
 
             xdr({
                 callback : jsonp,
@@ -2001,8 +2029,8 @@ function PN_API(setup) {
                     _invoke_error(response, err);
                 },
                 url      : [
-                    STD_ORIGIN, 'v1', 'auth', 'grant' ,
-                    'sub-key', SUBSCRIBE_KEY
+                    STD_ORIGIN, 'v1', 'auth'/*, 'grant' ,
+                    'sub-key', SUBSCRIBE_KEY*/
                 ]
             });
         },
@@ -2040,11 +2068,15 @@ function PN_API(setup) {
 
             // Create URL
             url = [
-                STD_ORIGIN, 'v1/push/sub-key',
-                SUBSCRIBE_KEY, 'devices', device_id
+                STD_ORIGIN, 'v1', 'push'/*, 'v1/push/sub-key',
+                SUBSCRIBE_KEY, 'devices', device_id*/
             ];
 
-            params = { 'uuid' : UUID, 'auth' : auth_key, 'type': gw_type};
+            params = {
+                'uuid' : UUID, 'auth' : auth_key, 'type': gw_type,
+                'subkey' : SUBSCRIBE_KEY,
+                'devices' : device_id
+            };
 
             if (op == "add") {
                 params['add'] = channel;
@@ -2117,6 +2149,9 @@ function PN_API(setup) {
             signature = signature.replace( /\//g, "_" );
 
             data['signature'] = signature;
+            data['action'] = 'audit';
+            data['subkey'] = SUBSCRIBE_KEY;
+
             xdr({
                 callback : jsonp,
                 data     : data,
@@ -2127,8 +2162,8 @@ function PN_API(setup) {
                     _invoke_error(response, err);
                 },
                 url      : [
-                    STD_ORIGIN, 'v1', 'auth', 'audit' ,
-                    'sub-key', SUBSCRIBE_KEY
+                    STD_ORIGIN, 'v1', 'auth'/*, 'audit' ,
+                    'sub-key', SUBSCRIBE_KEY*/
                 ]
             });
         },
@@ -2163,8 +2198,7 @@ function PN_API(setup) {
             var callback = args['callback'] || function() {}
             var err      = args['error']    || function() {}
             var jsonp    = jsonp_cb();
-            var data     = { 'uuid' : UUID, 'auth' : AUTH_KEY };
-
+            
             var st = JSON['stringify'](STATE);
             if (st.length > 2) data['state'] = JSON['stringify'](STATE);
 
@@ -2180,15 +2214,22 @@ function PN_API(setup) {
 
             if (USE_INSTANCEID) data['instanceid'] = INSTANCEID;
 
+						var data = {
+                'uuid' : UUID, 'auth' : AUTH_KEY,
+                'subkey' : SUBSCRIBE_KEY,
+                'channels' : channels,
+                'action' : 'heartbeat'
+            };
+
             xdr({
                 callback : jsonp,
                 data     : _get_url_params(data),
                 timeout  : SECOND * 5,
                 url      : [
-                    STD_ORIGIN, 'v2', 'presence',
+                    STD_ORIGIN, 'v2', 'presence'/*,
                     'sub-key', SUBSCRIBE_KEY,
                     'channel' , channels,
-                    'heartbeat'
+                    'heartbeat'*/
                 ],
                 success  : function(response) {
                     _invoke_callback(response, callback, err);

@@ -33,12 +33,11 @@
 
     require_once('../../../../wp-load.php'); 
 
-    function handler_subscribe ()	
+    function handler_publish ()	
     {
-        $current_time = round(microtime(true) * 1000);
-        $subscribed_response = array(7,$current_time,'cc1,cc2,cc3,cc4,cc5,cc6','c6,c5,c4,c3,c2,c1');
+        $published_response = array(5,4,3,2,1);
 
-        echo json_encode($subscribed_response);
+        echo json_encode($published_response);
     };
 
     //Typical headers
@@ -52,19 +51,20 @@
     //$action = esc_attr(trim($_POST['action']));
 
     //A bit of security
+    //todo - implement secure action lists
     $allowed_actions = array(
-        'subscribe'
+        'publish'
     );
 
     //For logged in users
-    add_action('SUBSCRIBE', 'handler_subscribe');
+    add_action('PUBLISH', 'handler_publish');
 
     //For guests
-    add_action('REJECT_subscribe', 'handler_reject');
+    add_action('REJECT_publish', 'handler_reject');
 
     //if(in_array($action, $allowed_actions)) {
     //    if(is_user_logged_in())
-            do_action('SUBSCRIBE');
+            do_action('PUBLISH');
     //    else
     //        do_action('REJECT_'.$action);
     //}
