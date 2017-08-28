@@ -36,7 +36,7 @@
     function handler_subscribe ()	
     {
         $current_time = round(microtime(true) * 1000);
-        $subscribed_response = array(7,$current_time,'cc1,cc2,cc3,cc4,cc5,cc6','c6,c5,c4,c3,c2,c1');
+        $subscribed_response = array(0,$current_time,'c1,c2');
 
         echo json_encode($subscribed_response);
     };

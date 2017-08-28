@@ -198,7 +198,7 @@ var PHONE = window.PHONE = function(config) {
             };
 
             // Setup Event Methods
-            talk.pc.onaddstream    = config.onaddstream || onaddstream;
+            talk.pc.ontrack/*onaddstream*/    = config.onaddstream || onaddstream;
             talk.pc.onicecandidate = onicecandidate;
             talk.pc.number         = number;
 
@@ -313,6 +313,23 @@ var PHONE = window.PHONE = function(config) {
             transmit( number, offer, 2 );
             pc.setLocalDescription( offer, debugcb, debugcb );
         }, debugcb );
+        // todo - implement new way to send an offer
+        // during RTCPeerConnection.onnegotiationneeded event handling
+        //
+        // function handleNegotiationNeededEvent() {
+        //   myPeerConnection.createOffer().then(function(offer) {
+        //     return myPeerConnection.setLocalDescription(offer);
+        //   })
+        //   .then(function() {
+        //     sendToServer({
+        //       name: myUsername,
+        //       target: targetUsername,
+        //       type: "video-offer",
+        //       sdp: myPeerConnection.localDescription
+        //     });
+        //   })
+        //   .catch(reportError);
+        // }
 
         // Return Session Reference
         return talk;
@@ -406,6 +423,7 @@ var PHONE = window.PHONE = function(config) {
         // Capture Local Pic
         snapper = function() {
             try {
+                // todo - Use of mozImageSmoothingEnabled is deprecated. Please use the unprefixed imageSmoothingEnabled property instead.
                 context.drawImage( video, 0, 0, snap.width, snap.height );
             } catch(e) {}
             return canvas.toDataURL( 'image/jpeg', 0.30 );

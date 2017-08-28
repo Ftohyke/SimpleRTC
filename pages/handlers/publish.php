@@ -35,6 +35,10 @@
 
     function handler_publish ()	
     {
+        // todo - there are actually over 6-7 "publish" requests
+        // carrying RTCPeerConnection offer data and auxiliary parameters: SDP, ice candidates,
+        // hangup state (?), avatar thumbnail, etc. All of them should be saved in local DB
+        // and resent to recipient.
         $published_response = array(5,4,3,2,1);
 
         echo json_encode($published_response);
