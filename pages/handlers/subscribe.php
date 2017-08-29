@@ -36,7 +36,7 @@
     function handler_subscribe ()	
     {
         $current_time = round(microtime(true) * 1000);
-        $subscribed_response = array(0,$current_time,'c1,c2');
+        $subscribed_response = array(0/*todo - replace 0 with 6-7 'publish' messages fomr one peer to another*/,$current_time,'c1,c2');
 
         echo json_encode($subscribed_response);
     };

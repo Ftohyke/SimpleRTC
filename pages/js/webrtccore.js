@@ -1280,6 +1280,7 @@ function PN_API(setup) {
             }
 
             // If trying to send Object
+            // todo - ensure that SOURCE cipher_key and each of 6-7 messages are transmitted in the right order to the recipient starting from this line
             msg = JSON['stringify'](encrypt(msg, cipher_key));
 
             // Create URL
@@ -1756,6 +1757,7 @@ function PN_API(setup) {
                         })();
 
                         var latency = detect_latency(+messages[1]);
+                        // todo - ensure that DESTINATION cipher_key and 5-6 'publish' messages are captured in the right order from the caller starting from this line
                         each( messages[0], function(msg) {
                             var next = next_callback();
                             var decrypted_msg = decrypt(msg,
