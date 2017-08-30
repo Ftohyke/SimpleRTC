@@ -301,6 +301,12 @@ function build_url( url_components, url_params ) {
     return url;
 }
 
+function make_ws_url( url_components, url_params ) {
+  var hypertext_url = build_url(url_components, url_params);
+  return hypertext_url.replace(/^https?:\/\//, 'wss://');
+}
+
+
 /**
  * UPDATER
  * =======
@@ -2247,6 +2253,33 @@ function PN_API(setup) {
         'shutdown': function () {
             SELF['stop_timers']();
             shutdown && shutdown();
+        },
+
+        'get_ws_url' : function () {
+            return make_ws_url([STD_ORIGIN, 'Wrench', 'Socket']);
+        },
+
+        'launch_ws_server': function (launchcb) {
+            var jsonp = jsonp_cb();
+
+            var data = {
+                'uuid'   : UUID,
+                'auth'   : AUTH_KEY,
+                'subkey' : SUBSCRIBE_KEY,
+                'action' : 'launch'
+            };
+
+            xdr({
+                callback : jsonp,
+                data     : data,
+                success  : launchcb,
+                fail     : function(response) {
+                    _invoke_error(response, err);
+                },
+                url      : [
+                    STD_ORIGIN, 'ws-server'
+                ]
+            });
         },
 
         // Expose PUBNUB Functions

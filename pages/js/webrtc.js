@@ -55,6 +55,13 @@
 var PHONE = window.PHONE = function(config) {
     var PHONE         = function(){};
     var pubnub        = PUBNUB(config);
+    //var WSURL         = pubnub.get_ws_url();
+    // WebSocket object with overriden prototype methods from PN API
+    // var pubnubws      = WS(WSURL, 'WSSKeyExchange');
+    // Browser WebSocket unchanged object
+    //var encorrws      = WebSocket(WSURL, 'WSSKeyExchange');
+    // Symmetric and asymmetric keys
+    var cipherkeys    = {};
     var pubkey        = config.publish_key   || 'demo';
     var snapper       = function(){ return ' ' }
     var subkey        = config.subscribe_key || 'demo';
@@ -176,6 +183,35 @@ var PHONE = window.PHONE = function(config) {
     PHONE.disconnect = function(cb) { disconnectcb = cb };
     PHONE.reconnect  = function(cb) { reconnectcb  = cb };
     PHONE.receive    = function(cb) { receivercb   = cb };
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // Request for WebSocket server initial start
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    function request_ws_server_launch() {
+        if (wssrvready) return;
+
+        var srv_status_cb = function (response) {
+            if (response[0] != 'OK')
+                timeout( request_ws_server_launch, 5*SECOND );
+        }
+
+        pubnub.launch_ws_server(srv_status_cb);
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // Initialize periodical encryption key exchange
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    function init_transmission_encryption() {
+        var ws_message_cb = function (msg_event) {
+            cipherkeys = msg_event.data;
+        }
+
+        var array = new Uint32Array(255);
+        window.crypto.getRandomValues(array);
+
+        encorrws.onmessage = ws_message_cb;
+        encorrws.send('InitKeyExchange');
+    }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // Add/Get Conversation - Creates a new PC or Returns Existing PC
@@ -368,13 +404,6 @@ var PHONE = window.PHONE = function(config) {
     };
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    // Expose local stream and pubnub object
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    PHONE.mystream = mystream;
-    PHONE.pubnub   = pubnub;
-    PHONE.oneway   = oneway;
-
-    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // Auto-hangup on Leave
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     PUBNUB.bind( 'unload,beforeunload', window, function() {
@@ -399,6 +428,13 @@ var PHONE = window.PHONE = function(config) {
 
         return true;
     } );
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // Expose local stream and pubnub object
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    PHONE.mystream = mystream;
+    PHONE.pubnub   = pubnub;
+    PHONE.oneway   = oneway;
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // Grab Local Video Snapshot
