@@ -111,41 +111,88 @@ var PHONE = window.PHONE = function(config) {
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // STUN Server List Configuration (public STUN list)
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    var rtcconfig = { 
-	    /*constraints: {
-			mandatory: {
-				OfferToReceiveAudio: true,
-				OfferToReceiveVideo: true
-			},
-			optional: []
-		},*/
-	    iceServers : [{ "url" :
-					"stun:stun.services.mozilla.com"
-	        /*navigator.mozGetUserMedia    ? "stun:stun.services.mozilla.com" : "stun:stunserver.org"*/
-	        /*navigator.webkitGetUserMedia ? "stun:stun.l.google.com:19302"   :
-	                                       "stun:23.21.150.121"*/
-	    	},
-	        /*{url: "stun:stun.l.google.com:19302"},
-	        {url: "stun:stun1.l.google.com:19302"},
-	        {url: "stun:stun2.l.google.com:19302"},
-	        {url: "stun:stun3.l.google.com:19302"},
-	        {url: "stun:stun4.l.google.com:19302"},
-	        {url: "stun:23.21.150.121"},
-	        {url: "stun:stun01.sipphone.com"},
-	        {url: "stun:stun.ekiga.net"},
-	        {url: "stun:stun.fwdnet.net"},
-	        {url: "stun:stun.ideasip.com"},
-	        {url: "stun:stun.iptel.org"},
-	        {url: "stun:stun.rixtelecom.se"},
-	        {url: "stun:stun.schlund.de"},*/
-	        {url: "stun:stunserver.org"}/*,
-	        {url: "stun:stun.softjoys.com"},
-	        {url: "stun:stun.voiparound.com"},
-	        {url: "stun:stun.voipbuster.com"},
-	        {url: "stun:stun.voipstunt.com"},
-	        {url: "stun:stun.voxgratia.org"},
-	        {url: "stun:stun.xten.com"}*/] 
-	    };
+    var rtcconfig = {
+        /*constraints: {
+            mandatory: {
+                OfferToReceiveAudio: true,
+                OfferToReceiveVideo: true
+            },
+            optional: []
+        },*/
+        certificates : [],
+        iceServers : [{"urls" :
+            ["stun:stun.services.mozilla.com", "stun:stunserver.org"]
+        }],
+        /*iceServers : [{ "url" :
+                navigator.mozGetUserMedia ? "stun:stun.services.mozilla.com"
+                : navigator.webkitGetUserMedia ? "stun:stun.l.google.com:19302"
+                : "stun:23.21.150.121"
+            },
+            {url: "stun:stun.l.google.com:19302"},
+            {url: "stun:stun1.l.google.com:19302"},
+            {url: "stun:stun2.l.google.com:19302"},
+            {url: "stun:stun3.l.google.com:19302"},
+            {url: "stun:stun4.l.google.com:19302"},
+            {url: "stun:23.21.150.121"},
+            {url: "stun:stun01.sipphone.com"},
+            {url: "stun:stun.ekiga.net"},
+            {url: "stun:stun.fwdnet.net"},
+            {url: "stun:stun.ideasip.com"},
+            {url: "stun:stun.iptel.org"},
+            {url: "stun:stun.rixtelecom.se"},
+            {url: "stun:stun.schlund.de"},
+            {url: "stun:stunserver.org"},
+            {url: "stun:stun.softjoys.com"},
+            {url: "stun:stun.voiparound.com"},
+            {url: "stun:stun.voipbuster.com"},
+            {url: "stun:stun.voipstunt.com"},
+            {url: "stun:stun.voxgratia.org"},
+            {url: "stun:stun.xten.com"}]*/
+    };
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // Cipher suites
+    // (for reference please read the documentation at
+    //  https://www.w3.org/TR/2016/PR-WebCryptoAPI)
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    ciphersuites = [
+        {
+            name: 'ECDSA',
+            hash: 'SHA-256',
+            modulusLength: 256,
+            publicExponent: new Uint8Array([1, 0, 1])
+        },
+        {
+            name: 'RSA-OAEP',
+            hash: 'SHA-256',
+            modulusLength: 4096,
+            publicExponent: new Uint8Array([1, 0, 1])
+        },
+        {
+            name: 'RSASSA-PKCS1-v1_5',
+            hash: 'SHA-256',
+            modulusLength: 4096,
+            publicExponent: new Uint8Array([1, 0, 1])
+        },
+        {
+            name: 'RSA-OAEP',
+            hash: 'SHA-256',
+            modulusLength: 2048,
+            publicExponent: new Uint8Array([1, 0, 1])
+        },
+        {
+            name: 'RSASSA-PKCS1-v1_5',
+            hash: 'SHA-256',
+            modulusLength: 2048,
+            publicExponent: new Uint8Array([1, 0, 1])
+        },
+        {
+            name: 'AES-CBC',
+            hash: 'SHA-256',
+            modulusLength: 256,
+            publicExponent: new Uint8Array([1, 0, 1])
+        }
+    ];
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // Custom STUN Options
@@ -214,12 +261,54 @@ var PHONE = window.PHONE = function(config) {
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    // Generate certificates
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    function generate_certificates( certs_ready_cb ) {
+        gen_certificates(
+            ongencert,
+            ciphersuites.slice()
+        );
+
+        // Add new certificates for PeerConnection
+        function gen_certificates( on_cert_ready, cert_descriptions ) {
+            if (cert_descriptions.length > 0)
+                PeerConnection.generateCertificate(
+                    cert_descriptions.pop()
+                ).then(
+                    function (cert) {
+                        on_cert_ready( cert, cert_descriptions );
+                    }
+                ).catch(
+                    // note - '.else' behavior for certifiacate generation is not entirely documented
+                    function (err) {
+                        on_cert_ready( null, cert_descriptions );
+                    }
+                );
+            else{
+                // todo - implement rigorous error handling
+                debugcb(err);
+            }
+        }
+
+        // Add generated certificate into a list of available certificates
+        function ongencert( cert, cert_descriptions ) {
+            cert && rtcconfig.certificates.push(cert);
+            if (cert_descriptions.length > 0)
+                gen_certificates( ongencert, cert_descriptions );
+            else
+               certs_ready_cb();
+        }
+    }
+
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // Add/Get Conversation - Creates a new PC or Returns Existing PC
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    function get_conversation(number, isAnswer) {
-        var talk = conversations[number] || (function(number){
+    function get_conversation( number, talk_ready_cb, isAnswer ) {
+        var talk = conversations[number] || get_new_conversation(number)
+
+        function get_new_conversation(num){
             var talk = {
-                number  : number,
+                number  : num,
                 status  : '',
                 image   : document.createElement('img'),
                 started : +new Date,
@@ -236,7 +325,7 @@ var PHONE = window.PHONE = function(config) {
             // Setup Event Methods
             talk.pc.ontrack/*onaddstream*/    = config.onaddstream || onaddstream;
             talk.pc.onicecandidate = onicecandidate;
-            talk.pc.number         = number;
+            talk.pc.number         = num;
 
             // Disconnect and Hangup
             talk.hangup = function(signal) {
@@ -246,23 +335,23 @@ var PHONE = window.PHONE = function(config) {
                 talk.imgset = false;
                 clearInterval(talk.snapi);
 
-                if (signal !== false) transmit( number, { hangup : true } );
+                if (signal !== false) transmit( num, { hangup : true } );
 
                 talk.end(talk);
                 talk.pc.close();
-                close_conversation(number);
+                close_conversation(num);
             };
 
             // Sending Messages
             talk.send = function(message) {
-                transmit( number, { usermsg : message } );
+                transmit( num, { usermsg : message } );
             };
 
             // Sending Stanpshots
             talk.snap = function() {
                 var pic = snapper();
                 if (talk.closed) clearInterval(talk.snapi);
-                transmit( number, { thumbnail : pic } );
+                transmit( num, { thumbnail : pic } );
                 var img = document.createElement('img');
                 img.src = pic;
                 return { data : pic, image : img };
@@ -287,9 +376,10 @@ var PHONE = window.PHONE = function(config) {
             update_conversation( talk, 'connecting' );
 
             // Return Brand New Talk Reference
-            conversations[number] = talk;
+            conversations[num] = talk;
+
             return talk;
-        })(number);
+        }
 
         // Return Existing or New Reference to Caller
         return talk;
@@ -334,41 +424,47 @@ var PHONE = window.PHONE = function(config) {
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     // Make Call - Create new PeerConnection
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-    PHONE.dial = function(number, servers) {
+    PHONE.dial = function(number, servers, on_call_dialed) {
         if (!!servers) add_servers(servers);
-        var talk = get_conversation(number);
-        var pc   = talk.pc;
 
-        // Prevent Repeat Calls
-        if (talk.dialed) return false;
-        talk.dialed = true;
+        generate_certificates(certreadycb);
 
-        // Send SDP Offer (Call)
-        pc.createOffer( function(offer) {
-            transmit( number, { hangup : true } );
-            transmit( number, offer, 2 );
-            pc.setLocalDescription( offer, debugcb, debugcb );
-        }, debugcb );
-        // todo - implement new way to send an offer
-        // during RTCPeerConnection.onnegotiationneeded event handling
-        //
-        // function handleNegotiationNeededEvent() {
-        //   myPeerConnection.createOffer().then(function(offer) {
-        //     return myPeerConnection.setLocalDescription(offer);
-        //   })
-        //   .then(function() {
-        //     sendToServer({
-        //       name: myUsername,
-        //       target: targetUsername,
-        //       type: "video-offer",
-        //       sdp: myPeerConnection.localDescription
-        //     });
-        //   })
-        //   .catch(reportError);
-        // }
+        function certreadycb() {
+            var talk = get_conversation(number);
+            var pc   = talk.pc;
 
-        // Return Session Reference
-        return talk;
+            // Prevent Repeat Calls
+            if (talk.dialed) return false;
+            talk.dialed = true;
+
+            // Send SDP Offer (Call)
+            pc.createOffer( function(offer) {
+                transmit( number, { hangup : true } );
+                transmit( number, offer, 2 );
+                pc.setLocalDescription( offer, debugcb, debugcb );
+            }, debugcb );
+            // todo - implement new way to send an offer
+            // during RTCPeerConnection.onnegotiationneeded event handling
+            //
+            // function handleNegotiationNeededEvent() {
+            //   myPeerConnection.createOffer().then(function(offer) {
+            //     return myPeerConnection.setLocalDescription(offer);
+            //   })
+            //   .then(function() {
+            //     sendToServer({
+            //       name: myUsername,
+            //       target: targetUsername,
+            //       type: "video-offer",
+            //       sdp: myPeerConnection.localDescription
+            //     });
+            //   })
+            //   .catch(reportError);
+            // }
+
+            // Return Session Reference
+            if (on_call_dialed)
+                on_call_dialed(talk);
+        }
     };
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -514,7 +610,7 @@ var PHONE = window.PHONE = function(config) {
     function onready(subscribed) {
         if (subscribed) myconnection = true;
         if (!((mystream || oneway) && myconnection)) return;
-        
+
         connectcb();
         readycb();
     }
@@ -591,7 +687,7 @@ var PHONE = window.PHONE = function(config) {
 
         // Get Call Reference
         var talk = get_conversation(message.number, true);
-        
+
         // Ignore if Closed
         if (talk.closed) return;
 
