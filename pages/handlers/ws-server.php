@@ -44,7 +44,7 @@
     function handler_launch ()	
     {
         /*
-Parts of below code were borrowed from here
+Parts of the code below were borrowed from here
 https://github.com/nicokaiser/php-websocket/blob/master/examples/server_ssl.php
 */
 

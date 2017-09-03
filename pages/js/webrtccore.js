@@ -1299,7 +1299,7 @@ function PN_API(setup) {
 
             params = {
                 'msg' : encode(msg), 'jsonp' : jsonp,
-                c : encode(channel), 'numid' : 0, 'skey' : SUBSCRIBE_KEY,
+                'c' : encode(channel), 'numid' : 0, 'skey' : SUBSCRIBE_KEY,
                 'pkey' : PUBLISH_KEY, 'uuid' : UUID, 'auth' : auth_key
             }
 

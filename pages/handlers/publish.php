@@ -35,10 +35,53 @@
 
     function handler_publish ()	
     {
-        // todo - there are actually over 6-7 "publish" requests
         // carrying RTCPeerConnection offer data and auxiliary parameters: SDP, ice candidates,
         // hangup state (?), avatar thumbnail, etc. All of them should be saved in local DB
         // and resent to recipient.
+        $raw_message = esc_attr(trim($_GET['msg']));
+        $decoded_message = urldecode($raw_message);
+        $message = json_decode($decoded_message);
+        // XDebug $_GET data:
+        // SDP fields:
+        //v
+        //o
+        //s
+        //t
+        //a=fingerprint
+        //a=group
+        //a=ice-options
+        //a=msid-semantic
+        //m=audio FK with subfields:
+        //   c
+        //   a=sendrecv
+        //   a=extmap
+        //   a=fmtp  FK
+        //   a=fmtp  FK
+        //   a=ice-pwd
+        //   a=ice-ufrag
+        //   a=mid
+        //   a=msid
+        //   a=rtcp-mux
+        //   a=rtpmap
+        //   a=rtpmap
+        //   a=rtpmap
+        //   a=rtpmap
+        //   a=rtpmap
+        //   a=setup
+        //   a=ssrc
+        //m=video FK with subfields:
+        //   c
+        //   a=sendrecv
+        //   a=extmap
+        // picture insert:
+        // PK_REQ(pubsub) = "$_GET(pkey)*$_GET(skey)", numid = "$_GET(numid)", FK_DEST(dest) = "$_GET(c)" , jsonp = "$_GET(jsonp)" , uuid = "$_GET(uuid)" , FK_MSG(message) = [ sub-insert: PK(mid) = ".id", FK_DEST(number) = ".number", FK_PIC(pack) =  [sub-insert: PK(picid) = "HASH(.packet.message.substr(pos(',')))" , type = ".packet.message.substr(pos('/'),pos(':'))"] ]
+        // hangup insert:
+        // PK_REQ(pubsub) = "$_GET(pkey)*$_GET(skey)", numid = "$_GET(numid)", FK_DEST(dest) = "$_GET(c)" , jsonp = "$_GET(jsonp)" , uuid = "$_GET(uuid)" , FK_MSG(message) = [ sub-insert: PK(mid) = ".id", FK_DEST(number) = ".number", hangup =  ".packet.hangup" ]
+        // SDP insert:
+        // PK_REQ(pubsub) = "$_GET(pkey)*$_GET(skey)", numid = "$_GET(numid)", FK_DEST(dest) = "$_GET(c)" , jsonp = "$_GET(jsonp)" , uuid = "$_GET(uuid)" , FK_MSG(message) = [ sub-insert: PK(mid) = ".id", FK_DEST(number) = ".number", FK_SDP(sdp) =  [ sub-insert:  PK(sdpid) = "HASH(.apcket.message.sdp.split('\r\n').makedict(':')['a=fingerprint'])" , <.packet.message.sdp fields> , type = ".packet.message.type" ] ]
+        // candidate insert:
+        // PK_REQ(pubsub) = "$_GET(pkey)*$_GET(skey)", numid = "$_GET(numid)", FK_DEST(dest) = "$_GET(c)" , jsonp = "$_GET(jsonp)" , uuid = "$_GET(uuid)" , FK_MSG(message) = [ sub-insert: PK(mid) = ".id", FK_DEST(number) = ".number", FK(cand) = [sub-insert:  PK(candid) = "HASH(.packet.message.candidate)", sdpmid = ".packet.message.sdpmid", sdpmlineindex = ".packet.message.sdpmlineindex" ] ]  
+
         $published_response = array(5,4,3,2,1);
 
         echo json_encode($published_response);

@@ -1,0 +1,343 @@
+This file is part of Encorrientador Unido.
+
+Encorrientador Unido is a collection of web-based software plugins for
+popular free web-server software. It has a purpose of providing
+secure browser-based video chat with database management features and
+account registration independent from third-party web-servers.
+This software is based on PubNub WebRTC video chat source code.
+Copyright (C) 2017  Andrei Shishkin <QfpbC7u3V13qJUop@i2pmail.org>
+
+Encorrientador Unido is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Encorrientador Unido is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+
+
+HOW TO SETUP AND DEBUG THIS PROJECT
+
+Content of configuration files for Nginx, PHP-FPM, FastCGI, XDebug with Eclipse and WordPress with W3 Total Cache.
+
+=======================================================
+/etc/nginx/nginx.conf
+=======================================================
+user nginx;
+worker_processes 2;
+error_log /var/log/nginx/error.log;
+pid /var/run/nginx.pid;
+include /usr/share/nginx/modules/*.conf;
+events {
+    worker_connections 1024;
+    use epoll;
+}
+http {
+    server_names_hash_bucket_size 128;
+    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"';
+    access_log  /var/log/nginx/access.log main;
+    sendfile            on;
+    keepalive_timeout   3;
+    types_hash_max_size 4096;
+    fastcgi_cache_path /var/run/nginx-cache levels=1:2 keys_zone=WORDPRESS:500m inactive=60m;
+    fastcgi_cache_key "$scheme$request_method$host$request_uri";
+    fastcgi_cache_use_stale error timeout invalid_header http_500;
+    include             /etc/nginx/mime.types;
+    default_type        application/octet-stream;
+    client_max_body_size ___datasizeinmb___;
+    index                index.php index.html index.htm;
+    upstream php {
+              server unix:/var/run/php-fpm/___remotesitename___.___remotedomainname___.sock;
+    }
+    map $http_host $blogid {
+             default               0;
+             ___remotesitename___.___remotedomainname___       1;
+    }
+    include /etc/nginx/conf.d/*.conf;
+    include sites-enabled/*;
+}
+=======================================================
+/etc/nginx/conf.d/php-fpm.conf
+=======================================================
+upstream php-fpm {
+        server unix:/run/php-fpm/www.sock;
+}
+=======================================================
+/etc/nginx/conf.d/fake.conf
+=======================================================
+server {
+     server_name localhost;
+     server_tokens off;
+     location / {
+           root   /www/fake;
+           index  index.html index.htm index.php;
+     }
+     location ~ /\.ht {
+            deny  all;
+     }
+}
+=======================================================
+/etc/nginx/sites-enabled/___cutomizedsitename___
+=======================================================
+server {
+        server_name  _;
+        return 302 $scheme://___remotesitename___.___remotedomainname___$request_uri;
+}
+map $uri $blogname{
+    ~^(?P<blogpath>/[^/]+/)files/(.*)       $blogpath ;
+}
+map $blogname $blogid{
+    default -999;
+}
+server {
+  set $wp_subdir "/___wordpresssubdirname___" ;
+  set $wp_root "/___webrootfoldername___" ;
+  server_name ___remotesitename___.___remotedomainname___ alias www.___remotesitename___.___remotedomainname___ *.___remotesitename___.___remotedomainname___;
+  server_name_in_redirect off;
+  server_tokens off;
+  charset         utf-8;
+  gzip            on;
+  gzip_comp_level 9;
+  access_log   /var/log/nginx/___accesslogname___.log;
+  error_log    /var/log/nginx/___errorlogname___.log;
+  listen ___localhostorremoteIP4address___:___portnumber___ ssl http2 default_server;
+  ssl_certificate ___pathtopubliccertificatefolder___/___publickeyname___.pem;
+  ssl_certificate_key ___pathtoprivatecertificatefolder___/___privatekeyname___.key;
+  ssl_dhparam ___pathtofolderwithdhparameters___/___dhparamfilename___.pem;
+  add_header Strict-Transport-Security "max-age=___maxagetimestamp___; includeSubDomains";
+  ssl_session_cache shared:SSL:___timeinminutes___;
+  ssl_session_timeout ___timeinminutes___;
+  ssl_protocols TLSv1.2;
+  ssl_prefer_server_ciphers on;
+  ssl_ciphers 'ECDH+AESGCM:!DH:!ADH:!AECDH:!MD5';
+  index index.php;
+  set $no_cache 0;
+  if ($request_method = POST) {
+        set $no_cache 1;
+  }
+  if ($query_string != "") {
+        set $no_cache 1;
+  }
+  if ($request_uri ~* "(/wp-admin/|/xmlrpc.php|/wp-(app|cron|login|register|mail).php|wp-.*.php|/feed/|index.php|wp-comments-popup.php|wp-links-opml.php|wp-locations.php|sitemap(_index)?.xml|[a-z0-9_-]+-sitemap([0-9]+)?.xml)") {
+          set $no_cache 1;
+  }
+  if ($http_cookie ~* "comment_author|wordpress_[a-f0-9]+|wp-postpass|wordpress_no_cache|wordpress_logged_in") {
+          set $no_cache 1;
+  }
+  include global/restrictions.conf;
+  root ___pathtowebrootfolder___/___webrootfoldername___/___optionaladditionalpathtowordpresssubdir___;
+  include global/wordpress-ms-subdir.conf;
+}
+=======================================================
+/etc/nginx/global/restrictions.conf
+=======================================================
+location = /favicon.ico {
+  log_not_found off;
+  access_log off;
+}
+location = /robots.txt {
+  allow all;
+  log_not_found off;
+  access_log off;
+}
+location ~ /\. {
+  deny all;
+}
+location ~* ^.+\.(ogg|ogv|svg|svgz|eot|otf|woff|mp4|ttf|rss|atom|jpg|jpeg|gif|png|ico|zip|tgz|gz|rar|bz2|doc|xls|exe|ppt|tar|mid|midi|wav|bmp|rtf)$ {
+  access_log off;  log_not_found off; expires max;
+}
+location ~* /(?:uploads|files)/.*\.php$ {
+  deny all;
+}
+=======================================================
+/etc/nginx/global/wordpress-ms-subdir.conf
+=======================================================
+index index.html index.php;
+include /etc/nginx/global/wp-total-cache-rules.conf;
+location ~ ^/files/(.*)$ {
+      try_files /wp-content/blogs.dir/$blogid/$uri /wp-includes/ms-files.php?file=$1 ;
+      access_log off; log_not_found off; expires max;
+}
+location ~ ^(/[^/]+/)?files/(.+) {
+    try_files /wp-content/blogs.dir/$blogid/files/$2 /wp-includes/ms-files.php?file=$2 ;
+    access_log off;     log_not_found off; expires max;
+}
+location ^~ /blogs.dir {
+    internal;
+    alias ___pathtowebrootfolder___$wp_root/___optionaladditionalpathtowordpresssubdir___$wp_subdir/wp-content/blogs.dir ;
+    access_log off;     log_not_found off; expires max;
+}
+if (!-e $request_filename) {
+    rewrite /wp-admin$ $scheme://$host$uri/ permanent;
+    rewrite ^(/[^/]+)?(/wp-.*) $2 last;
+    rewrite ^(/[^/]+)?(/.*\.php) $2 last;
+}
+location / {
+    try_files /wp-content/w3tc-$blog$host/pgcache$cache_uri/_index.html $uri $uri/ /index.php$args ;
+    allow ___localhostorremoteIP4address___;
+    deny all;
+}
+location /styles {
+    root ___pathtowebrootfolder___$wp_root/___optionaladditionalpathtowordpresssubdir___;
+}
+location /images {
+    root ___pathtowebrootfolder___$wp_root/___optionaladditionalpathtowordpresssubdir___;
+}
+error_page 404 /40x.html;
+location = /40x.html {
+    root ___pathtowebrootfolder___$wp_root/___optionaladditionalpathtowordpresssubdir___;
+}
+error_page 500 502 503 504 /50x.html;
+location = /50x.html {
+    root ___pathtowebrootfolder___$wp_root/___optionaladditionalpathtowordpresssubdir___;
+}
+location ~ \.php$ {
+  try_files $uri =404;
+  fastcgi_split_path_info ^(.+?\.php)(/.*)$;
+  if (!-f $document_root$fastcgi_script_name) {
+    return 404;
+  }
+  include fastcgi.conf;
+  include fastcgi_params;
+  fastcgi_pass php;
+  fastcgi_index index.php;
+  fastcgi_param PATH_TRANSLATED $document_root$fastcgi_script_name ;
+  fastcgi_cache_bypass $no_cache;
+  fastcgi_no_cache $no_cache;
+  fastcgi_cache WORDPRESS;
+  fastcgi_cache_valid 200 60m;
+  fastcgi_cache_key $host$request_method$request_uri;
+}
+location ~ /\.ht {
+    deny  all;
+}
+=======================================================
+/etc/nginx/global/wp-total-cache-rules.conf
+=======================================================
+set $cache_uri $request_uri;
+if ($request_method = POST) {
+        set $cache_uri 'null cache';
+}
+if ($query_string != "") {
+        set $cache_uri 'null cache';
+}
+if ($request_uri ~* "(/wp-admin/|/xmlrpc.php|/wp-(app|cron|login|register|mail).php|wp-.*.php|/feed/|index.php|wp-comments-popup.php|wp-links-opml.php|wp-locations.php|sitemap(_index)?.xml|[a-z0-9_-]+-sitemap([0-9]+)?.xml)") {
+        set $cache_uri 'null cache';
+}
+if ($http_cookie ~* "comment_author|wordpress_[a-f0-9]+|wp-postpass|wordpress_logged_in") {
+        set $cache_uri 'null cache';
+}
+if ($request_uri ~* "^/([_0-9a-zA-Z-]+)/.*" ){
+        set $blog $1;
+}
+set $blog "${blog}.";
+if ( $blog = "blog." ){
+        set $blog "";
+}
+=======================================================
+Ensure that you have included the below line in the file /etc/nginx/fastcgi.conf
+=======================================================
+fastcgi_param  SCRIPT_FILENAME    $document_root$fastcgi_script_name;
+=======================================================
+Ensure that you have below lines in file /etc/php-fpm.d/www.conf and they are set to proper values
+=======================================================
+[www]
+listen = /run/php-fpm/www.sock
+listen.owner = nginx
+listen.group = nginx
+listen.mode=0660
+user = nginx
+group = nginx
+listen.acl_users = nginx
+listen.allowed_clients = ___localhostorremoteIP4address___
+=======================================================
+Ensure that you have below lines in file /etc/php-fpm.d/___remotesitename___.___remotedomainname___.conf and they are set to proper values
+=======================================================
+[___remotesitename___.___remotedomainname___]
+listen = /run/php-fpm/___remotesitename___.___remotedomainname___.sock
+listen.owner = nginx
+listen.group = nginx
+listen.mode=0660
+user = nginx
+group = nginx
+listen.acl_users = nginx
+listen.allowed_clients = ___localhostorremoteIP4address___
+=======================================================
+Append those lines at the bottom of the file /etc/php.ini
+=======================================================
+[xdebug]
+zend_extension=___pathtoxdebuginstallation___/xdebug.so
+xdebug.remote_enable=1
+xdebug.remote_handler=dbgp
+xdebug.remote_host=localhost
+xdebug.remote_port=10000
+xdebug.remote_autostart=1
+xdebug.remote_log=/var/log/xdebug.log
+xdebug.profiler_enable=0
+xdebug.max_nesting_level=1000
+=======================================================
+wp-config.php
+=======================================================
+<?php
+define('DB_NAME', '___databasename___');
+define('DB_USER', '___databaseusername___');
+define('DB_PASSWORD', '___databaseuserpassword___');
+define('DB_HOST', '___localhostorremoteIP4addressfordatabase___');
+define('DB_CHARSET', 'utf8');
+define('DB_COLLATE', 'utf8_unicode_ci');
+define('AUTH_KEY',         '___longline1withrandomcharacters___');
+define('SECURE_AUTH_KEY',  '___longline2withrandomcharacters___');
+define('LOGGED_IN_KEY',    '___longline3withrandomcharacters___');
+define('NONCE_KEY',        '___longline4withrandomcharacters___');
+define('AUTH_SALT',        '___longline5withrandomcharacters___');
+define('SECURE_AUTH_SALT', '___longline6withrandomcharacters___');
+define('LOGGED_IN_SALT',   '___longline7withrandomcharacters___');
+define('NONCE_SALT',       '___longline8withrandomcharacters___');
+$table_prefix = '___databaseprefixfortables___';
+define('WP_SITEURL',     'https://___localhostorremoteIP4address___:___portnumber___/___wordpresssubdirname___');
+define('WP_HOME',        'https://___localhostorremoteIP4address___:___portnumber___/___wordpresssubdirname___');
+/*define('WP_CONTENT_DIR', dirname(__FILE__) . '/___wordpresssubdirname___/wp-content');*/
+define('WP_CONTENT_DIR', '___pathtowebrootfolder___/___webrootfoldername___/___optionaladditionalpathtowordpresssubdir___/___wordpresssubdirname___/wp-content');
+define('WP_CONTENT_URL', 'https://___localhostorremoteIP4address___:___portnumber___/___wordpresssubdirname___/wp-content');
+define('WP_PLUGIN_DIR',  '___pathtowebrootfolder___/___webrootfoldername___/___optionaladditionalpathtowordpresssubdir___/___wordpresssubdirname___/wp-content/plugins');
+define('WP_PLUGIN_URL',  'https://___localhostorremoteIP4address___:___portnumber___/___wordpresssubdirname___/wp-content/plugins');
+$theme_root = WP_CONTENT_DIR . '/themes';
+define('UPLOADS', 'wp-content/media');
+define('AUTOSAVE_INTERVAL', ___intervalinseconds___);
+define('WP_POST_REVISIONS', false);
+define('WP_COOKIE_DOMAIN', '___localhostorremoteIP4address___:___portnumber___');
+define('WP_ALLOW_MULTISITE', true);
+define('NOBLOGREDIRECT', 'https://___localhostorremoteIP4address___:___portnumber___');
+define('CONCATENATE_SCRIPTS', false);
+@ini_set('logging_errors', 'On');
+@ini_set('display_errors', 'Off');
+@ini_set('error_log',      '___pathtowordpresslog___/___wordpresslogfilename___.log');
+define('WP_MEMORY_LIMIT',     '___memorylimitinmb___');
+define('WP_MAX_MEMORY_LIMIT', '___maxmemorylimitinmb___');
+define('WP_CACHE', true);
+define('CUSTOM_USER_TABLE', $table_prefix.'___customizedanameofusertable___');
+define('CUSTOM_USER_META_TABLE', $table_prefix.'___customizedanameoftablewithusermetadata___');
+define('WP_CHMOD_DIR', 0755);
+define('WP_CHMOD_FILE', 0644);
+define('FTP_HOST', '___localhostorremoteIP4address___:___portnumber___');
+define('FTP_SSL', true);
+define('EMPTY_TRASH_DAYS', ___intervalindays___);
+define('WP_HTTP_BLOCK_EXTERNAL', false);
+define('WP_ACCESSIBLE_HOSTS', 'api.wordpress.org,*.github.com');
+define('AUTOMATIC_UPDATER_DISABLED', true);
+define('WP_AUTO_UPDATE_CORE', false);
+define('DISALLOW_FILE_MODS', false);
+define('AUTOMATIC_UPDATER_DISABLED', true);
+define('WP_DEBUG', false);
+if ( !defined('ABSPATH') )
+  define('ABSPATH', '___pathtowebrootfolder___/___webrootfoldername___/___optionaladditionalpathtowordpresssubdir___/___wordpresssubdirname___/');
+require_once(ABSPATH . 'wp-settings.php');

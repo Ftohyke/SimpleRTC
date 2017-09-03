@@ -120,9 +120,10 @@ var PHONE = window.PHONE = function(config) {
             optional: []
         },*/
         certificates : [],
-        iceServers : [{"urls" :
-            ["stun:stun.services.mozilla.com", "stun:stunserver.org"]
-        }],
+        iceServers : [{urls: [
+                                  "stun:stun.services.mozilla.com", "stun:stunserver.org"
+                          ]
+                      }],
         /*iceServers : [{ "url" :
                 navigator.mozGetUserMedia ? "stun:stun.services.mozilla.com"
                 : navigator.webkitGetUserMedia ? "stun:stun.l.google.com:19302"
@@ -156,7 +157,7 @@ var PHONE = window.PHONE = function(config) {
     //  https://www.w3.org/TR/2016/PR-WebCryptoAPI)
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
     ciphersuites = [
-        {
+        /*{
             name: 'ECDSA',
             hash: 'SHA-256',
             modulusLength: 256,
@@ -167,13 +168,13 @@ var PHONE = window.PHONE = function(config) {
             hash: 'SHA-256',
             modulusLength: 4096,
             publicExponent: new Uint8Array([1, 0, 1])
-        },
+        },*/
         {
             name: 'RSASSA-PKCS1-v1_5',
             hash: 'SHA-256',
             modulusLength: 4096,
             publicExponent: new Uint8Array([1, 0, 1])
-        },
+        }/*,
         {
             name: 'RSA-OAEP',
             hash: 'SHA-256',
@@ -191,7 +192,7 @@ var PHONE = window.PHONE = function(config) {
             hash: 'SHA-256',
             modulusLength: 256,
             publicExponent: new Uint8Array([1, 0, 1])
-        }
+        }*/
     ];
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
