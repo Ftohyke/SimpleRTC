@@ -31,10 +31,15 @@
     //if (!isset( $_POST['action']))
         //die('-1');
 
-    require_once('../../../../wp-load.php'); 
+    require_once('../encorr-commons.php');
+    require_once('../../../../wp-load.php');
+    $db_connection = mysqli_connect(DB_HOST, DB_USER, DB_PASSWORD);
+    mysqli_select_db($db_connection, DB_NAME);
 
     function handler_publish ()	
     {
+        global $db_connection;
+
         // carrying RTCPeerConnection offer data and auxiliary parameters: SDP, ice candidates,
         // hangup state (?), avatar thumbnail, etc. All of them should be saved in local DB
         // and resent to recipient.
@@ -82,7 +87,43 @@
         // candidate insert:
         // PK_REQ(pubsub) = "$_GET(pkey)*$_GET(skey)", numid = "$_GET(numid)", FK_DEST(dest) = "$_GET(c)" , jsonp = "$_GET(jsonp)" , uuid = "$_GET(uuid)" , FK_MSG(message) = [ sub-insert: PK(mid) = ".id", FK_DEST(number) = ".number", FK(cand) = [sub-insert:  PK(candid) = "HASH(.packet.message.candidate)", sdpmid = ".packet.message.sdpmid", sdpmlineindex = ".packet.message.sdpmlineindex" ] ]  
 
-        $published_response = array(5,4,3,2,1);
+        try {
+            $stmt_list = $db_connection->prepare("SELECT table_name FROM information_schema.tables;");
+            if( $stmt_list->execute() )
+                $stmt_stat->bind_result($tables);
+                foreach( $tables as &$table ) {
+                    if( $sdp_requests = preg_match('/'+SDPTABLE+'/', $table) )
+                        break;
+                }
+                if( $sdp_requests != 1 ) {
+                    $db_connection->prepare("CREATE TABLE "+DESTINATIONTABLE+
+                        " ( PRIMARY KEY (dest_id) INT(16) UNSIGNED AUTO_INCREMENT,"+
+                        "   dest_key VARCHAR(50) NOT NULL"+
+                        " )"
+                    );
+                    $db_connection->prepare("CREATE TABLE "+PACKAGETABLE+
+                        " ( PRIMARY KEY (pkg_id) INT(16) UNSIGNED AUTO_INCREMENT,"+
+                        "   data TExT NOT NULL"+
+                        " )"
+                    );
+                    $db_connection->prepare("CREATE TABLE "+SDPTABLE+
+                        " ( PRIMARY KEY (picreq_id) INT(16) UNSIGNED AUTO_INCREMENT,"+
+                        "   pubsub VARCHAR(50) NOT NULL,"+
+                        "   numid INT(16) UNSIGNED NOT NULL,"+
+                        "   FOREIGN KEY (dest) PREFERENCES "+DESTINATIONTABLE+"(dest_id),"+
+                        "   jsonp VARCHAR(50),"+
+                        "   uuid VRCHAR(50) NOT NULL,"+
+                        "   FOREIGN KEY (package) PREFERENCES "+PACKAGETABLE+"(pkg_id)"+
+                        " )"
+                      );
+                }
+            else
+                throw new Exception('Failed to execute a query.');
+        } catch (Exception $e) {
+            echo json_encode(array('Caught exception: ' + $e->getMessage() + "\n"));
+        }
+
+        $published_response = array($stmt_status);
 
         echo json_encode($published_response);
     };
