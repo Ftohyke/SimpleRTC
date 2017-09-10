@@ -25,6 +25,120 @@
 
 
 
-    define('SDPTABLE', 'sdp_req_data');
+    define('SDPTABLE', 'sdp_sdp_data');
+    define('HANGUPTABLE', 'sdp_hangup_data');
+    define('ICECANDIDATETABLE', 'sdp_icecand_data');
+    define('REQTABLE', 'sdp_req_data');
+    define('THUMBNAILTABLE', 'sdp_pack_data');
+    define('DESTINATIONTABLE', 'sdp_dest_data');
+
+
+    if( !isset($tables_initialized) )
+        $tables_initialized = False;
+
+    try {
+        // Check if there are initialized tables in DB:
+        if( !$tables_initialized ) {
+            $stmt_list = $db_connection->prepare("SELECT table_name FROM information_schema.tables;");
+
+            if( $stmt_list->execute() ) {
+                $stmt_stat->bind_result($tables);
+
+                $sdp_table_key = array_search( SDPTABLE, $table );
+                if( !$sdp_table_key ) {
+                    $queries = array();
+
+                    $queries[HANGUPTABLE] = $db_connection->prepare("CREATE TABLE " .
+                        HANGUPTABLE .
+                        " ( PRIMARY KEY (cand_id) INT(16) UNSIGNED AUTO_INCREMENT," .
+                        "   candidate VARCHAR(50) NOT NULL," .
+                        "   sdpmlineindex VARCHAR(50) NOT NULL" .
+                        " )"
+                    ));
+                    $queries[SDPTABLE] = $db_connection->prepare("CREATE TABLE " .
+                        SDPTABLE .
+                        " ( PRIMARY KEY (sdp_id) INT(16) UNSIGNED AUTO_INCREMENT," .
+                        "   sdp_fingerpriint VARCHAR(50) NOT NULL UNIQUE," .
+                        "   message_typ VARCHAR(50)," .
+                        "   sdp_content LONGBLOB NOT NULL" .
+                        " )"
+                    );
+                    $queries[ICECANDIDATETABLE] = $db_connection->prepare("CREATE TABLE " .
+                        ICECANDIDATETABLE .
+                        " ( PRIMARY KEY (cand_id) INT(16) UNSIGNED AUTO_INCREMENT," .
+                        "   candidate VARCHAR(50) NOT NULL," .
+                        "   sdpmlineindex VARCHAR(50) NOT NULL" .
+                        " )"
+                    );
+                    $queries[DESTINATIONTABLE] = $db_connection->prepare("CREATE TABLE " .
+                        DESTINATIONTABLE .
+                        " ( PRIMARY KEY (dest_id) INT(16) UNSIGNED AUTO_INCREMENT," .
+                        "   dest_key VARCHAR(50) NOT NULL," .
+                        "   dest_number INT(16)" .
+                        " )"
+                    );
+                    $queries[THUMBNAILTABLE] = $db_connection->prepare("CREATE TABLE " .
+                        THUMBNAILTABLE .
+                        " ( PRIMARY KEY (pkg_id) INT(16) UNSIGNED AUTO_INCREMENT," .
+                        "   data TEXT NOT NULL" .
+                        " )"
+                    );
+                    /*
+                    $queries[reqtable] = $db_connection->prepare("CREATE TABLE " .
+                        REQTABLE .
+                        " ( PRIMARY KEY (picreq_id) INT(16) UNSIGNED AUTO_INCREMENT," .
+                        "   pubsub VARCHAR(50) NOT NULL," .
+                        "   numid INT(16) UNSIGNED NOT NULL," .
+                        "   FOREIGN KEY (dest) REFERENCES " .
+                        DESTINATIONTABLE .
+                        "(dest_id)," .
+                        "   jsonp VARCHAR(50)," .
+                        "   uuid VARCHAR(50) NOT NULL," .
+                        "   mid VARCHAR(50) NOT NULL," .
+                        "   CONSTRAINT UNIQUE (candidate, package, sdp, hangup)," .
+                        "   CONSTRAINT CHECK (candidate is not null or package is not null)," .
+                        "   FOREIGN KEY (candidate) REFERENCES "+ICECANDIDATETABLE+"(cand_id)," .
+                        "   FOREIGN KEY (package) REFERENCES "+PACKAGETABLE+"(pkg_id)," .
+                        "   FOREIGN KEY (sdp) REFERENCES "+SDPTABLE+"(sdp_id)," .
+                        "   FOREIGN KEY (sdp) REFERENCES "+SDPTABLE+"(sdp_id)" .
+                        " )"
+                    );
+                    */
+                    $queries[reqtable] = $db_connection->prepare("CREATE TABLE " .
+                        REQTABLE .
+                        " ( PRIMARY KEY (picreq_id) INT(16) UNSIGNED AUTO_INCREMENT," .
+                        "   pubsub VARCHAR(50) NOT NULL UNIQUE," .
+                        "   numid INT(16) UNSIGNED NOT NULL," .
+                        "   foreign key (dest) REFERENCES " .
+                        DESTINATIONTABLE .
+                        "(dest_id)," .
+                        "   jsonp VARCHAR(50)," .
+                        "   uuid VRCHAR(50) NOT NULL," .
+                        "   mid VARCHAR(50) NOT NULL," .
+                        "   CONSTRAINT UNIQUE (candidate, thumbnail, sdp, hangup)," .
+                        "   CONSTRAINT CHECK (candidate IS NOT NULL" .
+                        "                     OR thumbnail IS NOT NULL" .
+                        "                     OR sdp IS NOT NULL" .
+                        "                     OR hangup IS NOT NULL" .
+                        "                    )," .
+                        "   candidate LONGBLOB," .
+                        "   thumbnail LONGBLOB," .
+                        "   sdp LONGBLOB," .
+                        "   hangup LONGBLOB" .
+                        " )"
+                      );
+
+                    foreach( $queries as $q_key => $q_value )
+                        if( !$query->execute() )
+                            throw new Exception('Failed to create table for %s.' . $q_key);
+                }
+                $tables_initialized = True;
+            }
+            else
+               throw new Exception('Failed to check SDP tables.');
+        }
+    } catch (Exception $e) {
+        echo json_encode(array('Caught exception: ' + $e->getMessage() + "\n"));
+    }
 
 ?>

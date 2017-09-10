@@ -31,8 +31,8 @@
     //if (!isset( $_POST['action']))
         //die('-1');
 
-    require_once('../encorr-commons.php');
     require_once('../../../../wp-load.php');
+    require_once('../encorr-commons.php');
     $db_connection = mysqli_connect(DB_HOST, DB_USER, DB_PASSWORD);
     mysqli_select_db($db_connection, DB_NAME);
 
@@ -40,10 +40,20 @@
     {
         global $db_connection;
 
-        // carrying RTCPeerConnection offer data and auxiliary parameters: SDP, ice candidates,
-        // hangup state (?), avatar thumbnail, etc. All of them should be saved in local DB
-        // and resent to recipient.
+        // Event handler for packages carrying RTCPeerConnection offer data
+        // and auxiliary parameters: SDP, ice candidates, hangup state (?),
+        // avatar thumbnail, etc. All of them should be temporarily saved
+        // in local DB and resent to recipient later.
         $raw_message = esc_attr(trim($_GET['msg']));
+
+        $query_insert_args = array();
+        $query_insert_args["skey"] = _GET['skey'];
+        $query_insert_args["pkey"] = _GET['pkey'];
+        $query_insert_args["numid"] = _GET['numid'];
+        $query_insert_args["dest"] = _GET['c'];
+        $query_insert_args["jsonp"] = _GET['jsonp'];
+        $query_insert_args["uuid"] = _GET['uuid'];
+
         $decoded_message = urldecode($raw_message);
         $message = json_decode($decoded_message);
         // XDebug $_GET data:
@@ -78,54 +88,156 @@
         //   c
         //   a=sendrecv
         //   a=extmap
+        //
+        //
         // picture insert:
-        // PK_REQ(pubsub) = "$_GET(pkey)*$_GET(skey)", numid = "$_GET(numid)", FK_DEST(dest) = "$_GET(c)" , jsonp = "$_GET(jsonp)" , uuid = "$_GET(uuid)" , FK_MSG(message) = [ sub-insert: PK(mid) = ".id", FK_DEST(number) = ".number", FK_PIC(pack) =  [sub-insert: PK(picid) = "HASH(.packet.message.substr(pos(',')))" , type = ".packet.message.substr(pos('/'),pos(':'))"] ]
+        // PK_REQ(pubsub) = "$_GET(pkey)*$_GET(skey)",
+        // numid = "$_GET(numid)",
+        // FK_DEST(dest) = "$_GET(c)" ,
+        // jsonp = "$_GET(jsonp)" ,
+        // uuid = "$_GET(uuid)" ,
+        // FK_MSG(message) = [ sub-insert:
+        //                     PK(mid) = ".id",
+        //                     FK_DEST(number) = ".number",
+        //                     FK_PIC(pack) =  [sub-insert:
+        //                                      PK(picid) = "HASH(.packet.message.substr(pos(',')))" ,
+        //                                      type = ".packet.message.substr(pos('/'),pos(':'))"
+        //                                     ]
+        //                   ]
+        //
         // hangup insert:
-        // PK_REQ(pubsub) = "$_GET(pkey)*$_GET(skey)", numid = "$_GET(numid)", FK_DEST(dest) = "$_GET(c)" , jsonp = "$_GET(jsonp)" , uuid = "$_GET(uuid)" , FK_MSG(message) = [ sub-insert: PK(mid) = ".id", FK_DEST(number) = ".number", hangup =  ".packet.hangup" ]
+        // PK_REQ(pubsub) = "$_GET(pkey)*$_GET(skey)",
+        // numid = "$_GET(numid)",
+        // FK_DEST(dest) = "$_GET(c)",
+        // jsonp = "$_GET(jsonp)",
+        // uuid = "$_GET(uuid)",
+        // FK_MSG(message) = [ sub-insert:
+        //                     PK(mid) = ".id",
+        //                     FK_DEST(number) = ".number",
+        //                     hangup =  ".packet.hangup"
+        //                   ]
+        //
         // SDP insert:
-        // PK_REQ(pubsub) = "$_GET(pkey)*$_GET(skey)", numid = "$_GET(numid)", FK_DEST(dest) = "$_GET(c)" , jsonp = "$_GET(jsonp)" , uuid = "$_GET(uuid)" , FK_MSG(message) = [ sub-insert: PK(mid) = ".id", FK_DEST(number) = ".number", FK_SDP(sdp) =  [ sub-insert:  PK(sdpid) = "HASH(.apcket.message.sdp.split('\r\n').makedict(':')['a=fingerprint'])" , <.packet.message.sdp fields> , type = ".packet.message.type" ] ]
+        // PK_REQ(pubsub) = "$_GET(pkey)*$_GET(skey)",
+        // numid = "$_GET(numid)",
+        // FK_DEST(dest) = "$_GET(c)",
+        // jsonp = "$_GET(jsonp)",
+        // uuid = "$_GET(uuid)",
+        // FK_MSG(message) = [ sub-insert:
+        //                     PK(mid) = ".id",
+        //                     FK_DEST(number) = ".number",
+        //                     FK_SDP(sdp) =  [ sub-insert:
+        //                                      PK(sdpid) =
+        //                                        "HASH(.apcket.message.sdp.split('\r\n')
+        //                                              .makedict(':')
+        //                                              ['a=fingerprint']
+        //                                             )
+        //                                        ",
+        //                                      <.packet.message.sdp fields>,
+        //                                      type = ".packet.message.type"
+        //                                    ]
+        //                   ]
+        //
         // candidate insert:
-        // PK_REQ(pubsub) = "$_GET(pkey)*$_GET(skey)", numid = "$_GET(numid)", FK_DEST(dest) = "$_GET(c)" , jsonp = "$_GET(jsonp)" , uuid = "$_GET(uuid)" , FK_MSG(message) = [ sub-insert: PK(mid) = ".id", FK_DEST(number) = ".number", FK(cand) = [sub-insert:  PK(candid) = "HASH(.packet.message.candidate)", sdpmid = ".packet.message.sdpmid", sdpmlineindex = ".packet.message.sdpmlineindex" ] ]  
+        // PK_REQ(pubsub) = "$_GET(pkey)*$_GET(skey)",
+        // numid = "$_GET(numid)",
+        // FK_DEST(dest) = "$_GET(c)" ,
+        // jsonp = "$_GET(jsonp)" ,
+        // uuid = "$_GET(uuid)" ,
+        // FK_MSG(message) = [ sub-insert:
+        //                     PK(mid) = ".id",
+        //                     FK_DEST(number) = ".number",
+        //                     FK(cand) = [ sub-insert:
+        //                                  PK(candid) = "HASH(.packet.message.candidate)",
+        //                                  sdpmid = ".packet.message.sdpmid",
+        //                                  sdpmlineindex = ".packet.message.sdpmlineindex"
+        //                                ]
+        //                   ]
 
-        try {
-            $stmt_list = $db_connection->prepare("SELECT table_name FROM information_schema.tables;");
-            if( $stmt_list->execute() )
-                $stmt_stat->bind_result($tables);
-                foreach( $tables as &$table ) {
-                    if( $sdp_requests = preg_match('/'+SDPTABLE+'/', $table) )
-                        break;
-                }
-                if( $sdp_requests != 1 ) {
-                    $db_connection->prepare("CREATE TABLE "+DESTINATIONTABLE+
-                        " ( PRIMARY KEY (dest_id) INT(16) UNSIGNED AUTO_INCREMENT,"+
-                        "   dest_key VARCHAR(50) NOT NULL"+
-                        " )"
+        $prev_req_check = $db_connection->prepare("SELECT pubsub FROM " . REQTABLE);
+
+        $m_packet = $message["packet"];
+
+        if( array_key_exists( "thumbnail", $m_packet ) ) {
+            $query_insert_args["mid"] = $message.id;
+            $query_insert_args["number"] = $message.number;
+            $query_insert_args["thumbnail"] = $m_packet["thumbnail"];
+            $ps_keys = query_insert_args["pkey"] . query_insert_args["skey"];
+
+            if( $prev_req_check->execute() ) {
+                $prev_req_check->bind($prev_requests);
+
+                $prev_req_key = array_search( $ps_keys, $prev_requests );
+
+                if( !$prev_req_key ) {
+                    $check_destination =
+                        $db_connection->prepare("SELECT dest_id, dest_key FROM " .
+                            DESTINATIONTABLE
+                        );
+
+                    if( $check_destination->execute() ) {
+                        $check_destination->bind_result( $dest_id_list, $dest_key_list );
+
+                        $dest_id = array_search( $query_insert_args["dest"],
+                            $dest_key_list
+                        );
+
+                        if( !$dest_id ) {
+                            $new_destination = db_connection->prepare("INSERT INTO " .
+                                DESTINATIONTABLE .
+                                "(dest_key, dest_number)" .
+                                "VALUES" .
+                                "(?, ?)"
+                            );
+                            $new_destination->bind_params( 'si',
+                                $query_insert_args["dest"],
+                                $query_insert_args["number"]
+                            );
+
+                            if( $new_destination->execute() )
+                                $dest_id = $new_destination->insert_id();
+                            else
+                                throw new Exception("Failed to register new destination.");
+                        }
+                    }
+                    else
+                        throw new Exception("Failed to search for existing destination.");
+
+                    $new_thumbnail_request = $db_connection->prepare("INSERT INTO " .
+                        REQTABLE .
+                        "( pubsub, numid, dest, jsonp, uuid, mid, thumbnail)" .
+                        "VALUES" .
+                        "( ?, ?, ?, ?, ?, ?, ? )"
                     );
-                    $db_connection->prepare("CREATE TABLE "+PACKAGETABLE+
-                        " ( PRIMARY KEY (pkg_id) INT(16) UNSIGNED AUTO_INCREMENT,"+
-                        "   data TExT NOT NULL"+
-                        " )"
+                    $new_thumbnail_request->bind_params( 'siissib',
+                        $query_insert_args["pubsub"],
+                        $query_insert_args["numid"],
+                        $dest_id,
+                        $query_insert_args["jsonp"],
+                        $query_insert_args["uuid"],
+                        $query_insert_args["mid"],
+                        $query_insert_args["thumbnail"]
                     );
-                    $db_connection->prepare("CREATE TABLE "+SDPTABLE+
-                        " ( PRIMARY KEY (picreq_id) INT(16) UNSIGNED AUTO_INCREMENT,"+
-                        "   pubsub VARCHAR(50) NOT NULL,"+
-                        "   numid INT(16) UNSIGNED NOT NULL,"+
-                        "   FOREIGN KEY (dest) PREFERENCES "+DESTINATIONTABLE+"(dest_id),"+
-                        "   jsonp VARCHAR(50),"+
-                        "   uuid VRCHAR(50) NOT NULL,"+
-                        "   FOREIGN KEY (package) PREFERENCES "+PACKAGETABLE+"(pkg_id)"+
-                        " )"
-                      );
+
+                    if( !$new_thumbnail_request->execute() )
+                        throw new Exception("Failed to register new thumbnail request.");
                 }
+            }
             else
-                throw new Exception('Failed to execute a query.');
-        } catch (Exception $e) {
-            echo json_encode(array('Caught exception: ' + $e->getMessage() + "\n"));
+                throw new Exception ("Failed to search for previous peer requests.");
         }
+        /*
+        if( array_key_exists( "sdp", $message["packet"] ) )
+            db_connection->prepare();
+        if( array_key_exists( "hangup", $message["packet"] ) )
+            db_connection->prepare();
+        if( array_key_exists( "candidate", $message["packet"] ) )
+            db_connection->prepare();
+        */
 
-        $published_response = array($stmt_status);
+        $publish_response = array(0);
 
-        echo json_encode($published_response);
+        echo json_encode($publish_response);
     };
 
     //Typical headers

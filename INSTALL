@@ -25,6 +25,26 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 HOW TO SETUP AND DEBUG THIS PROJECT
 
+
+TL;DR
+
+... TODO ...
+
+
+Step-by-step instruction on setting up resources
+
+1) You need to copy all content of the folder /usr/share/wordpress to /var/www/___webrootfoldername___ , where ___webrootfoldername___ is a location for your web root, and /var/www - is ususal path for web folder used by Nginx and Apache servers in Linux.
+
+2) If you are getting any warnings from SELinux regarding access to any file resides inside your directory /var/www/___webrootfoldername___, than you should follow one of the SETroubleshooter advices and make an user exception for every error with different types of access method. The only difference here - you wold be better want to include absolute path to file or directory in SELinux log warning, rather than leave the name only.
+  For example, you have php-fpm blocked from accessing xdebug log by SELinux. To exceptionally allow it again, execute following commands:
+    $ausearch -c 'php-fpm' --raw | grep xdebug | tail -n 1 | audit2allow -M <___the_name_of_your_exception_rule___>
+    $semodule -X 300 -i  <___the_name_of_your_exception_rule___>.pp
+
+3) Do not forget install a plugin for your browser to enable inserting XDebug cookies in requests to the server. For example for Firefox you can install "theeasiestxebug" plugin.
+
+
+Settings
+
 Content of configuration files for Nginx, PHP-FPM, FastCGI, XDebug with Eclipse and WordPress with W3 Total Cache.
 
 =======================================================
