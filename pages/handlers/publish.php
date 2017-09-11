@@ -33,7 +33,6 @@
 
     require_once('../../../../wp-load.php');
     require_once('../encorr-commons.php');
-    $db_connection = mysqli_connect(DB_HOST, DB_USER, DB_PASSWORD);
     mysqli_select_db($db_connection, DB_NAME);
 
     function handler_publish ()	
@@ -154,7 +153,10 @@
         //                                ]
         //                   ]
 
-        $prev_req_check = $db_connection->prepare("SELECT pubsub FROM " . REQTABLE);
+        $prev_req_check = $db_connection->prepare("SELECT pubsub FROM " .
+            REQTABLE .
+            " WHERE pubsub LIKE ?"
+        );
 
         $m_packet = $message["packet"];
 
@@ -164,32 +166,30 @@
             $query_insert_args["thumbnail"] = $m_packet["thumbnail"];
             $ps_keys = query_insert_args["pkey"] . query_insert_args["skey"];
 
+            $prev_req_check->bind_param("s", "%".$ps_key."%");
+
             if( $prev_req_check->execute() ) {
-                $prev_req_check->bind($prev_requests);
+                $result_prev_requests = $prev_req_check->get_result();
 
-                $prev_req_key = array_search( $ps_keys, $prev_requests );
-
-                if( !$prev_req_key ) {
+                if( $result_prev_requests != NULL ) {
                     $check_destination =
                         $db_connection->prepare("SELECT dest_id, dest_key FROM " .
-                            DESTINATIONTABLE
+                            DESTINATIONTABLE .
+                            " WHERE dest_key LIKE ?"
                         );
+                    $check_destination->bind_param( "s", "%".$query_insert_args["dest"]."%" );
 
                     if( $check_destination->execute() ) {
-                        $check_destination->bind_result( $dest_id_list, $dest_key_list );
+                        $result_dest_key_id = $check_destination->get_result();
 
-                        $dest_id = array_search( $query_insert_args["dest"],
-                            $dest_key_list
-                        );
-
-                        if( !$dest_id ) {
-                            $new_destination = db_connection->prepare("INSERT INTO " .
+                        if( $result_dest_key_id != NULL ) {
+                            $new_destination = $db_connection->prepare("INSERT INTO " .
                                 DESTINATIONTABLE .
                                 "(dest_key, dest_number)" .
                                 "VALUES" .
                                 "(?, ?)"
                             );
-                            $new_destination->bind_params( 'si',
+                            $new_destination->bind_param( "si",
                                 $query_insert_args["dest"],
                                 $query_insert_args["number"]
                             );
@@ -209,7 +209,7 @@
                         "VALUES" .
                         "( ?, ?, ?, ?, ?, ?, ? )"
                     );
-                    $new_thumbnail_request->bind_params( 'siissib',
+                    $new_thumbnail_request->bind_param( "siissib",
                         $query_insert_args["pubsub"],
                         $query_insert_args["numid"],
                         $dest_id,

@@ -33,20 +33,26 @@
     define('DESTINATIONTABLE', 'sdp_dest_data');
 
 
-    if( !isset($tables_initialized) )
-        $tables_initialized = False;
+    $db_connection = mysqli_connect(DB_HOST, DB_USER, DB_PASSWORD);
+
+    if( !isset($tables_initialised) )
+        $tables_initialised = False;
 
     try {
-        // Check if there are initialized tables in DB:
-        if( !$tables_initialized ) {
-            $stmt_list = $db_connection->prepare("SELECT table_name FROM information_schema.tables;");
+        // Check if there are initialised tables in DB:
+        if( !$tables_initialised ) {
+            mysqli_select_db($db_connection, "information_schema");
+            $stmt_list = $db_connection->prepare("SELECT table_name FROM tables" .
+                " WHERE table_name LIKE ?"
+            );
+            $stmt_list->bind_param( "s", "%".SDPTABLE."%" );
 
             if( $stmt_list->execute() ) {
-                $stmt_stat->bind_result($tables);
+                $result_tables = $stmt_list->get_result();
 
-                $sdp_table_key = array_search( SDPTABLE, $table );
-                if( !$sdp_table_key ) {
+                if( $result_tables != NULL ) {
                     $queries = array();
+                    mysqli_select_db($db_connection, DB_NAME);
 
                     $queries[HANGUPTABLE] = $db_connection->prepare("CREATE TABLE " .
                         HANGUPTABLE .
@@ -54,7 +60,7 @@
                         "   candidate VARCHAR(50) NOT NULL," .
                         "   sdpmlineindex VARCHAR(50) NOT NULL" .
                         " )"
-                    ));
+                    );
                     $queries[SDPTABLE] = $db_connection->prepare("CREATE TABLE " .
                         SDPTABLE .
                         " ( PRIMARY KEY (sdp_id) INT(16) UNSIGNED AUTO_INCREMENT," .
@@ -132,7 +138,7 @@
                         if( !$query->execute() )
                             throw new Exception('Failed to create table for %s.' . $q_key);
                 }
-                $tables_initialized = True;
+                $tables_initialised = True;
             }
             else
                throw new Exception('Failed to check SDP tables.');
