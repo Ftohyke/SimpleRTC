@@ -43,15 +43,15 @@
         // and auxiliary parameters: SDP, ice candidates, hangup state (?),
         // avatar thumbnail, etc. All of them should be temporarily saved
         // in local DB and resent to recipient later.
-        $raw_message = esc_attr(trim($_GET['msg']));
+        $raw_message = esc_attr(trim($_GET["msg"]));
 
         $query_insert_args = array();
-        $query_insert_args["skey"] = _GET['skey'];
-        $query_insert_args["pkey"] = _GET['pkey'];
-        $query_insert_args["numid"] = _GET['numid'];
-        $query_insert_args["dest"] = _GET['c'];
-        $query_insert_args["jsonp"] = _GET['jsonp'];
-        $query_insert_args["uuid"] = _GET['uuid'];
+        $query_insert_args["skey"] = _GET["skey"];
+        $query_insert_args["pkey"] = _GET["pkey"];
+        $query_insert_args["numid"] = _GET["numid"];
+        $query_insert_args["dest"] = _GET["c"];
+        $query_insert_args["jsonp"] = _GET["jsonp"];
+        $query_insert_args["uuid"] = _GET["uuid"];
 
         $decoded_message = urldecode($raw_message);
         $message = json_decode($decoded_message);
@@ -127,9 +127,9 @@
         //                     FK_DEST(number) = ".number",
         //                     FK_SDP(sdp) =  [ sub-insert:
         //                                      PK(sdpid) =
-        //                                        "HASH(.apcket.message.sdp.split('\r\n')
+        //                                        "HASH(.apcket.message.sdp.split("\r\n")
         //                                              .makedict(':')
-        //                                              ['a=fingerprint']
+        //                                              ["a=fingerprint"]
         //                                             )
         //                                        ",
         //                                      <.packet.message.sdp fields>,

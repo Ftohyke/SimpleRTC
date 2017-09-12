@@ -25,12 +25,12 @@
 
 
 
-    define('SDPTABLE', 'sdp_sdp_data');
-    define('HANGUPTABLE', 'sdp_hangup_data');
-    define('ICECANDIDATETABLE', 'sdp_icecand_data');
-    define('REQTABLE', 'sdp_req_data');
-    define('THUMBNAILTABLE', 'sdp_pack_data');
-    define('DESTINATIONTABLE', 'sdp_dest_data');
+    define("SDPTABLE", "sdp_sdp_data");
+    define("HANGUPTABLE", "sdp_hangup_data");
+    define("ICECANDIDATETABLE", "sdp_icecand_data");
+    define("REQTABLE", "sdp_req_data");
+    define("THUMBNAILTABLE", "sdp_pack_data");
+    define("DESTINATIONTABLE", "sdp_dest_data");
 
 
     $db_connection = mysqli_connect(DB_HOST, DB_USER, DB_PASSWORD);
@@ -43,9 +43,10 @@
         if( !$tables_initialised ) {
             mysqli_select_db($db_connection, "information_schema");
             $stmt_list = $db_connection->prepare("SELECT table_name FROM tables" .
-                " WHERE table_name LIKE ?"
+                " WHERE table_name = ?"
             );
-            $stmt_list->bind_param( "s", "%".SDPTABLE."%" );
+            $param_value = SDPTABLE;
+            $stmt_list->bind_param( "s", $param_value );
 
             if( $stmt_list->execute() ) {
                 $result_tables = $stmt_list->get_result();
@@ -56,14 +57,14 @@
 
                     $queries[HANGUPTABLE] = $db_connection->prepare("CREATE TABLE " .
                         HANGUPTABLE .
-                        " ( PRIMARY KEY (cand_id) INT(16) UNSIGNED AUTO_INCREMENT," .
+                        " ( cand_id INT(16) UNSIGNED AUTO_INCREMENT PRIMARY KEY," .
                         "   candidate VARCHAR(50) NOT NULL," .
                         "   sdpmlineindex VARCHAR(50) NOT NULL" .
                         " )"
                     );
                     $queries[SDPTABLE] = $db_connection->prepare("CREATE TABLE " .
                         SDPTABLE .
-                        " ( PRIMARY KEY (sdp_id) INT(16) UNSIGNED AUTO_INCREMENT," .
+                        " ( sdp_id INT(16) UNSIGNED AUTO_INCREMENT PRIMARY KEY," .
                         "   sdp_fingerpriint VARCHAR(50) NOT NULL UNIQUE," .
                         "   message_typ VARCHAR(50)," .
                         "   sdp_content LONGBLOB NOT NULL" .
@@ -71,53 +72,53 @@
                     );
                     $queries[ICECANDIDATETABLE] = $db_connection->prepare("CREATE TABLE " .
                         ICECANDIDATETABLE .
-                        " ( PRIMARY KEY (cand_id) INT(16) UNSIGNED AUTO_INCREMENT," .
+                        " ( cand_id INT(16) UNSIGNED AUTO_INCREMENT PRIMARY KEY," .
                         "   candidate VARCHAR(50) NOT NULL," .
                         "   sdpmlineindex VARCHAR(50) NOT NULL" .
                         " )"
                     );
                     $queries[DESTINATIONTABLE] = $db_connection->prepare("CREATE TABLE " .
                         DESTINATIONTABLE .
-                        " ( PRIMARY KEY (dest_id) INT(16) UNSIGNED AUTO_INCREMENT," .
+                        " ( dest_id INT(16) UNSIGNED AUTO_INCREMENT PRIMARY KEY," .
                         "   dest_key VARCHAR(50) NOT NULL," .
                         "   dest_number INT(16)" .
                         " )"
                     );
                     $queries[THUMBNAILTABLE] = $db_connection->prepare("CREATE TABLE " .
                         THUMBNAILTABLE .
-                        " ( PRIMARY KEY (pkg_id) INT(16) UNSIGNED AUTO_INCREMENT," .
+                        " ( pkg_id INT(16) UNSIGNED AUTO_INCREMENT PRIMARY KEY," .
                         "   data TEXT NOT NULL" .
                         " )"
                     );
                     /*
                     $queries[reqtable] = $db_connection->prepare("CREATE TABLE " .
                         REQTABLE .
-                        " ( PRIMARY KEY (picreq_id) INT(16) UNSIGNED AUTO_INCREMENT," .
+                        " ( picreq_id INT(16) UNSIGNED AUTO_INCREMENT PRIMARY KEY," .
                         "   pubsub VARCHAR(50) NOT NULL," .
                         "   numid INT(16) UNSIGNED NOT NULL," .
-                        "   FOREIGN KEY (dest) REFERENCES " .
+                        "   dest FOREIGN KEY REFERENCES " .
                         DESTINATIONTABLE .
-                        "(dest_id)," .
+                        "(dest_id) ON DELETE CASCADE," .
                         "   jsonp VARCHAR(50)," .
                         "   uuid VARCHAR(50) NOT NULL," .
                         "   mid VARCHAR(50) NOT NULL," .
                         "   CONSTRAINT UNIQUE (candidate, package, sdp, hangup)," .
                         "   CONSTRAINT CHECK (candidate is not null or package is not null)," .
-                        "   FOREIGN KEY (candidate) REFERENCES "+ICECANDIDATETABLE+"(cand_id)," .
-                        "   FOREIGN KEY (package) REFERENCES "+PACKAGETABLE+"(pkg_id)," .
-                        "   FOREIGN KEY (sdp) REFERENCES "+SDPTABLE+"(sdp_id)," .
-                        "   FOREIGN KEY (sdp) REFERENCES "+SDPTABLE+"(sdp_id)" .
+                        "   candidate FOREIGN KEY REFERENCES "+ICECANDIDATETABLE+"(cand_id) ON DELETE CASCADE," .
+                        "   package FOREIGN KEY REFERENCES "+PACKAGETABLE+"(pkg_id) ON DELETE CASCADE," .
+                        "   sdp FOREIGN KEY REFERENCES "+SDPTABLE+"(sdp_id) ON DELETE CASCADE," .
+                        "   sdp FOREIGN KEY REFERENCES "+SDPTABLE+"(sdp_id) ON DELETE CASCADE" .
                         " )"
                     );
                     */
-                    $queries[reqtable] = $db_connection->prepare("CREATE TABLE " .
+                    $queries[REQTABLE] = $db_connection->prepare("CREATE TABLE " .
                         REQTABLE .
-                        " ( PRIMARY KEY (picreq_id) INT(16) UNSIGNED AUTO_INCREMENT," .
+                        " ( picreq_id INT(16) UNSIGNED AUTO_INCREMENT PRIMARY KEY," .
                         "   pubsub VARCHAR(50) NOT NULL UNIQUE," .
                         "   numid INT(16) UNSIGNED NOT NULL," .
-                        "   foreign key (dest) REFERENCES " .
+                        "   dest FOREIGN KEY REFERENCES " .
                         DESTINATIONTABLE .
-                        "(dest_id)," .
+                        "(dest_id) ON DELETE CASCADE," .
                         "   jsonp VARCHAR(50)," .
                         "   uuid VRCHAR(50) NOT NULL," .
                         "   mid VARCHAR(50) NOT NULL," .
@@ -135,16 +136,16 @@
                       );
 
                     foreach( $queries as $q_key => $q_value )
-                        if( !$query->execute() )
-                            throw new Exception('Failed to create table for %s.' . $q_key);
+                        if( !$q_value->execute() )
+                            throw new Exception("Failed to create table for %s." . $q_key);
                 }
                 $tables_initialised = True;
             }
             else
-               throw new Exception('Failed to check SDP tables.');
+               throw new Exception("Failed to check SDP tables.");
         }
     } catch (Exception $e) {
-        echo json_encode(array('Caught exception: ' + $e->getMessage() + "\n"));
+        echo json_encode(array("Caught exception: " + $e->getMessage() + "\n"));
     }
 
 ?>
