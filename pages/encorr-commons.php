@@ -29,7 +29,7 @@
     define("HANGUPTABLE", "sdp_hangup_data");
     define("ICECANDIDATETABLE", "sdp_icecand_data");
     define("REQTABLE", "sdp_req_data");
-    define("THUMBNAILTABLE", "sdp_pack_data");
+    define("THUMBNAILTABLE", "sdp_thumbnail_data");
     define("DESTINATIONTABLE", "sdp_dest_data");
 
 
@@ -110,39 +110,64 @@
                         "   sdp FOREIGN KEY REFERENCES "+SDPTABLE+"(sdp_id) ON DELETE CASCADE" .
                         " )"
                     );
-                    */
+                     */
                     $queries[REQTABLE] = $db_connection->prepare("CREATE TABLE " .
                         REQTABLE .
-                        " ( picreq_id INT(16) UNSIGNED AUTO_INCREMENT PRIMARY KEY," .
+                        " ( picreq_id INT UNSIGNED " .
+                        "             AUTO_INCREMENT NOT NULL " .
+                        "             PRIMARY KEY," .
                         "   pubsub VARCHAR(50) NOT NULL UNIQUE," .
-                        "   numid INT(16) UNSIGNED NOT NULL," .
-                        "   dest FOREIGN KEY REFERENCES " .
+                        "   numid SMALLINT UNSIGNED NOT NULL," .
+                        "   dest INT(16) UNSIGNED," .
+                        "   FOREIGN KEY (dest) REFERENCES " .
                         DESTINATIONTABLE .
                         "(dest_id) ON DELETE CASCADE," .
                         "   jsonp VARCHAR(50)," .
-                        "   uuid VRCHAR(50) NOT NULL," .
+                        "   uuid VARCHAR(50) NOT NULL," .
                         "   mid VARCHAR(50) NOT NULL," .
-                        "   CONSTRAINT UNIQUE (candidate, thumbnail, sdp, hangup)," .
-                        "   CONSTRAINT CHECK (candidate IS NOT NULL" .
-                        "                     OR thumbnail IS NOT NULL" .
-                        "                     OR sdp IS NOT NULL" .
-                        "                     OR hangup IS NOT NULL" .
+                        "   CONSTRAINT UNIQUE (candidate_idx," .
+                        "                      thumbnail_idx," .
+                        "                      sdp_idx," .
+                        "                      hangup_idx" .
+                        "                     )," .
+                        "   CONSTRAINT CHECK (candidate_idx IS NOT NULL" .
+                        "                     OR thumbnail_idx IS NOT NULL" .
+                        "                     OR sdp_idx IS NOT NULL" .
+                        "                     OR hangup_idx IS NOT NULL" .
                         "                    )," .
                         "   candidate LONGBLOB," .
                         "   thumbnail LONGBLOB," .
                         "   sdp LONGBLOB," .
-                        "   hangup LONGBLOB" .
+                        "   hangup LONGBLOB," .
+                        "   candidate_idx SMALLINT UNSIGNED DEFAULT '0'," .
+                        "   sdp_idx SMALLINT UNSIGNED DEFAULT '0'," .
+                        "   hangup_idx SMALLINT UNSIGNED DEFAULT '0'," .
+                        "   thumbnail_idx SMALLINT UNSIGNED DEFAULT '0'," .
+                        "   INDEX IDXcandidate (candidate_idx, candidate(255))," .
+                        "   INDEX IDXhangup (hangup_idx, hangup(255))," .
+                        "   INDEX IDXsdp (sdp_idx, sdp(255))," .
+                        "   INDEX IDXthumbnail (thumbnail_idx, thumbnail(255))" .
                         " )"
                       );
 
                     foreach( $queries as $q_key => $q_value )
-                        if( !$q_value->execute() )
-                            throw new Exception("Failed to create table for %s." . $q_key);
+                        if( !$q_value->execute() ) {
+                            $last_db_error = $db_connection->error;
+                            throw new Exception("Failed to create table for " .
+                                                $q_key .
+                                                ". Reason: " .
+                                                $las_db_error
+                                            );
+                        }
                 }
                 $tables_initialised = True;
             }
-            else
-               throw new Exception("Failed to check SDP tables.");
+            else {
+                $last_db_error = $db_connection->error;
+                throw new Exception("Failed to check SDP tables. Reason: " .
+                                    $last_db_error
+                                );
+            }
         }
     } catch (Exception $e) {
         echo json_encode(array("Caught exception: " + $e->getMessage() + "\n"));
