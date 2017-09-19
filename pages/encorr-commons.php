@@ -51,7 +51,7 @@
             if( $stmt_list->execute() ) {
                 $result_tables = $stmt_list->get_result();
 
-                if( $result_tables != NULL ) {
+                if( $result_tables->num_rows == 0 ) {
                     $queries = array();
                     mysqli_select_db($db_connection, DB_NAME);
 

@@ -46,12 +46,12 @@
         $raw_message = esc_attr(trim($_GET["msg"]));
 
         $query_insert_args = array();
-        $query_insert_args["skey"] = _GET["skey"];
-        $query_insert_args["pkey"] = _GET["pkey"];
-        $query_insert_args["numid"] = _GET["numid"];
-        $query_insert_args["dest"] = _GET["c"];
-        $query_insert_args["jsonp"] = _GET["jsonp"];
-        $query_insert_args["uuid"] = _GET["uuid"];
+        $query_insert_args["skey"] = $_GET["skey"];
+        $query_insert_args["pkey"] = $_GET["pkey"];
+        $query_insert_args["numid"] = $_GET["numid"];
+        $query_insert_args["dest"] = $_GET["c"];
+        $query_insert_args["jsonp"] = $_GET["jsonp"];
+        $query_insert_args["uuid"] = $_GET["uuid"];
 
         $decoded_message = urldecode($raw_message);
         $message = json_decode($decoded_message);
@@ -153,87 +153,112 @@
         //                                ]
         //                   ]
 
-        $prev_req_check = $db_connection->prepare("SELECT pubsub FROM " .
-            REQTABLE .
-            " WHERE pubsub LIKE ?"
-        );
+        try {
+            $prev_req_check = $db_connection->prepare("SELECT pubsub FROM " .
+                REQTABLE .
+                " WHERE pubsub LIKE '%?%'"
+            );
 
-        $m_packet = $message["packet"];
+            $m_packet = $message->packet;
 
-        if( array_key_exists( "thumbnail", $m_packet ) ) {
-            $query_insert_args["mid"] = $message.id;
-            $query_insert_args["number"] = $message.number;
-            $query_insert_args["thumbnail"] = $m_packet["thumbnail"];
-            $ps_keys = query_insert_args["pkey"] . query_insert_args["skey"];
+            if( array_key_exists( "thumbnail", $m_packet ) ) {
+                $query_insert_args["mid"] = $message->id;
+                $query_insert_args["number"] = $message->number;
+                $query_insert_args["thumbnail"] = $m_packet->thumbnail;
+                $ps_keys = $query_insert_args["pkey"] . $query_insert_args["skey"];
 
-            $prev_req_check->bind_param("s", "%".$ps_key."%");
+                $prev_req_check->bind_param( "s", $ps_keys );
 
-            if( $prev_req_check->execute() ) {
-                $result_prev_requests = $prev_req_check->get_result();
+                if( $prev_req_check->execute() ) {
+                    $result_prev_requests = $prev_req_check->get_result();
 
-                if( $result_prev_requests != NULL ) {
-                    $check_destination =
-                        $db_connection->prepare("SELECT dest_id, dest_key FROM " .
-                            DESTINATIONTABLE .
-                            " WHERE dest_key LIKE ?"
-                        );
-                    $check_destination->bind_param( "s", "%".$query_insert_args["dest"]."%" );
-
-                    if( $check_destination->execute() ) {
-                        $result_dest_key_id = $check_destination->get_result();
-
-                        if( $result_dest_key_id != NULL ) {
-                            $new_destination = $db_connection->prepare("INSERT INTO " .
+                    if( $result_prev_requests->num_rows == 0 ) {
+                        $check_destination =
+                            $db_connection->prepare("SELECT dest_id, dest_key FROM " .
                                 DESTINATIONTABLE .
-                                "(dest_key, dest_number)" .
-                                "VALUES" .
-                                "(?, ?)"
-                            );
-                            $new_destination->bind_param( "si",
-                                $query_insert_args["dest"],
-                                $query_insert_args["number"]
+                                " WHERE dest_key LIKE '%" .
+                                $query_insert_args["dest"] .
+                                "%'"
                             );
 
-                            if( $new_destination->execute() )
-                                $dest_id = $new_destination->insert_id();
-                            else
-                                throw new Exception("Failed to register new destination.");
+                        $dest_foreign_id = NULL;
+                        if( $check_destination->execute() ) {
+                            $result_dest_key_id = $check_destination->get_result();
+
+                            if( $result_dest_key_id->num_rows == 0 ) {
+                                $new_destination = $db_connection->prepare("INSERT INTO " .
+                                    DESTINATIONTABLE .
+                                    "(dest_key, dest_number)" .
+                                    "VALUES" .
+                                    "(" .
+                                    $query_insert_args["dest"] .
+                                    ", " .
+                                    $query_insert_args["number"] .
+                                    ")"
+                                );
+
+                                if( $new_destination->execute() )
+                                    $dest_id = $new_destination->insert_id;
+                                else
+                                    throw new Exception("Failed to register new destination.");
+                            }
+                            else {
+                                if( $result_dest_key_id->num_rows > 1 )
+                                    throw new Exception("Found multiple non-unique destination Ids.");
+
+                                $dest_uniq_key = $result_dest_key_id->fetch_assoc();
+                                $dest_foreign_id = $dest_uniq_key["dest_id"];
+                            }
+                        }
+                        else
+                            throw new Exception("Failed to search for existing destination.");
+
+                        if( $dest_foreign_id != NULL ) {
+                            $new_thumbnail_request = $db_connection->prepare("INSERT INTO " .
+                                REQTABLE .
+                                "( pubsub, numid, dest, jsonp, uuid, mid, thumbnail)" .
+                                "VALUES" .
+                                "( ?, ?, ?, ?, ?, ?, ? )"
+                            );
+
+                            $numeric_id = $query_insert_args["numid"];
+                            $jsonp = $query_insert_args["jsonp"];
+                            $req_uuid = $query_insert_args["uuid"];
+                            $req_mid = $query_insert_args["mid"];
+                            $thumbnail_data = $query_insert_args["thumbnail"];
+                            $new_thumbnail_request->bind_param( "siissib",
+                                $ps_keys,
+                                $numeric_id,
+                                $dest_foreign_id,
+                                $jsonp,
+                                $req_uuid,
+                                $req_mid,
+                                $thumbnail_data
+                            );
+
+                            if( !$new_thumbnail_request->execute() )
+                                throw new Exception("Failed to register new thumbnail request.");
+                        }
+                        else {
+                            throw new Exception("Failed to get a proper destination Id.");
                         }
                     }
-                    else
-                        throw new Exception("Failed to search for existing destination.");
-
-                    $new_thumbnail_request = $db_connection->prepare("INSERT INTO " .
-                        REQTABLE .
-                        "( pubsub, numid, dest, jsonp, uuid, mid, thumbnail)" .
-                        "VALUES" .
-                        "( ?, ?, ?, ?, ?, ?, ? )"
-                    );
-                    $new_thumbnail_request->bind_param( "siissib",
-                        $query_insert_args["pubsub"],
-                        $query_insert_args["numid"],
-                        $dest_id,
-                        $query_insert_args["jsonp"],
-                        $query_insert_args["uuid"],
-                        $query_insert_args["mid"],
-                        $query_insert_args["thumbnail"]
-                    );
-
-                    if( !$new_thumbnail_request->execute() )
-                        throw new Exception("Failed to register new thumbnail request.");
                 }
+                else
+                    throw new Exception ("Failed to search for previous peer requests.");
             }
-            else
-                throw new Exception ("Failed to search for previous peer requests.");
+            /*
+            if( array_key_exists( "sdp", $message->packet ) )
+                db_connection->prepare();
+            if( array_key_exists( "hangup", $message->packet ) )
+                db_connection->prepare();
+            if( array_key_exists( "candidate", $message->packet ) )
+                db_connection->prepare();
+            */
         }
-        /*
-        if( array_key_exists( "sdp", $message["packet"] ) )
-            db_connection->prepare();
-        if( array_key_exists( "hangup", $message["packet"] ) )
-            db_connection->prepare();
-        if( array_key_exists( "candidate", $message["packet"] ) )
-            db_connection->prepare();
-        */
+        catch (Exception $e) {
+            echo json_encode(array("Caught exception: " + $e->getMessage() + "\n"));
+        }
 
         $publish_response = array(0);
 
